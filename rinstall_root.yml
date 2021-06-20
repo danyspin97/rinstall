@@ -1,0 +1,12 @@
+prefix: /usr/local
+exec_prefix: @prefix@
+bindir: @exec_prefix@/bin
+libdir: @exec_prefix@/lib
+datarootdir: @prefix@/share
+datadir: @prefix@/share
+sysconfdir: @prefix@/etc
+localstatedir: @prefix@/var
+runstatedir: @localstatedir@/run
+includedir: @prefix@/include
+docdir: @datarootdir@/doc
+mandir: @datarootdir@/man

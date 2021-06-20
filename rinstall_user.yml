@@ -1,0 +1,7 @@
+bindir: .local/bin
+libdir: .local/lib
+datarootdir: @XDG_DATA_HOME@
+datadir: @XDG_DATA_HOME@/share
+sysconfdir: @XDG_CONFIG_HOME@
+localstatedir: @XDG_STATE_HOME@
+runstatedir: @XDG_RUNTIME_DIR@

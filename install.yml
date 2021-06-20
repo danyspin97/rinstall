@@ -1,0 +1,8 @@
+name: rinstall
+version: 0.1
+program_type: rust
+exe:
+  - src: rinstall
+docs:
+  - src: LICENSE.md
+  - src: README.md
