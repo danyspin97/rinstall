@@ -93,7 +93,7 @@ fn main() -> Result<()> {
             ensure!(source_path.exists(), "{:?} does not exists", source);
 
             if source_path.is_file() {
-                let destination = if destination.as_os_str().to_str().unwrap().ends_with("/") {
+                let destination = if destination.as_os_str().to_str().unwrap().ends_with('/') {
                     destination.join(
                         source
                             .file_name()

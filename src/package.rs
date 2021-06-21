@@ -75,11 +75,11 @@ impl Package {
         }
 
         results.extend(install_files!(exe, &dirs.bindir, bin_local_root, "exe"));
-        &results.extend(install_files!(libs, &dirs.libdir, None, "libs"));
-        &results.extend(install_files!(data, &dirs.datadir, None, "data"));
+        results.extend(install_files!(libs, &dirs.libdir, None, "libs"));
+        results.extend(install_files!(data, &dirs.datadir, None, "data"));
         results.extend(install_files!(config, &dirs.sysconfdir, None, "config"));
         if let Some(mandir) = &dirs.mandir {
-            &results.extend(install_files!(man, mandir, None, "man"));
+            results.extend(install_files!(man, mandir, None, "man"));
         }
 
         let package_dir = format!("{}-{}", self.name.to_owned(), self.version);
