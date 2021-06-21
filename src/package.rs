@@ -15,6 +15,16 @@ pub enum Type {
 }
 
 #[derive(Deserialize)]
+enum Completion {
+    #[serde(rename(deserialize = "bash"))]
+    Bash(PathBuf),
+    #[serde(rename(deserialize = "fish"))]
+    Fish(PathBuf),
+    #[serde(rename(deserialize = "zsh"))]
+    Zsh(PathBuf),
+}
+
+#[derive(Deserialize)]
 pub struct Package {
     name: String,
     version: String,
@@ -30,6 +40,14 @@ pub struct Package {
     data: Vec<Install>,
     #[serde(default)]
     docs: Vec<Install>,
+    #[serde(default)]
+    config: Vec<Install>,
+    #[serde(default, rename(deserialize = "desktop-files"))]
+    desktop_files: Vec<Install>,
+    #[serde(default)]
+    appdata: Vec<Install>,
+    #[serde(default)]
+    completions: Vec<Completion>,
 }
 
 impl Package {
@@ -59,6 +77,7 @@ impl Package {
         results.extend(install_files!(exe, &dirs.bindir, bin_local_root, "exe"));
         &results.extend(install_files!(libs, &dirs.libdir, None, "libs"));
         &results.extend(install_files!(data, &dirs.datadir, None, "data"));
+        results.extend(install_files!(config, &dirs.sysconfdir, None, "config"));
         if let Some(mandir) = &dirs.mandir {
             &results.extend(install_files!(man, mandir, None, "man"));
         }
@@ -72,6 +91,53 @@ impl Package {
                 "docs"
             ));
         }
+
+        results.extend(install_files!(
+            desktop_files,
+            &dirs.datarootdir.join("applications"),
+            None,
+            "desktop"
+        ));
+
+        results.extend(install_files!(
+            appdata,
+            &dirs.datarootdir.join("appdata"),
+            None,
+            "appdata"
+        ));
+
+        results.extend(
+            self.completions
+                .into_iter()
+                .map(|completion| -> Result<Install> {
+                    let (install, parent_dir) = match completion {
+                        Completion::Bash(path) => (
+                            Install {
+                                source: path,
+                                destination: None,
+                            },
+                            "bash-completion/completions",
+                        ),
+                        Completion::Fish(path) => (
+                            Install {
+                                source: path,
+                                destination: None,
+                            },
+                            "usr/share/fish/vendor_completions.d",
+                        ),
+                        Completion::Zsh(path) => (
+                            Install {
+                                source: path,
+                                destination: None,
+                            },
+                            "zsh/site-functions",
+                        ),
+                    };
+                    install.sanitize(&dirs.datarootdir.join(parent_dir), None)
+                })
+                .collect::<Result<Vec<Install>>>()
+                .context("error while iterating completion files")?,
+        );
 
         Ok(results)
     }
