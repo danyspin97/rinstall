@@ -6,7 +6,7 @@ mod package;
 use std::{env, fs, path::PathBuf};
 
 use clap::Clap;
-use color_eyre::eyre::{bail, ensure, Context, Result};
+use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
 use walkdir::WalkDir;
 use xdg::BaseDirectories;
 
@@ -93,25 +93,43 @@ fn main() -> Result<()> {
             ensure!(source_path.exists(), "{:?} does not exists", source);
 
             if source_path.is_file() {
+                let destination = if destination.as_os_str().to_str().unwrap().ends_with("/") {
+                    destination.join(
+                        source
+                            .file_name()
+                            .with_context(|| format!("unable to get filename for {:?}", source))?,
+                    )
+                } else {
+                    destination.to_owned()
+                };
                 println!("Installing {:?} to {:?}", source, destination);
                 if !dry_run {
-                    fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
+                    fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
                         format!("unable to create directory {:?}", destination.parent())
                     })?;
-                    fs::copy(source_path, destination).with_context(|| {
+                    fs::copy(source_path, &destination).with_context(|| {
                         format!("unable to copy file {:?} to {:?}", source, destination)
                     })?;
                 }
             } else if source_path.is_dir() {
-                WalkDir::new(source_path)
+                WalkDir::new(&source_path)
                     .into_iter()
-                    .filter_entry(|entry| entry.path().is_file())
                     .try_for_each(|entry| -> Result<()> {
                         let entry = entry?;
+                        if !entry.file_type().is_file() {
+                            return Ok(());
+                        }
+
                         let full_path = entry.path();
-                        let relative_path = full_path.strip_prefix(source).with_context(|| {
-                            format!("unable to strip prefix {:?} from {:?}", source, full_path)
-                        })?;
+                        let relative_path =
+                            full_path.strip_prefix(&source_path).with_context(|| {
+                                format!(
+                                    "unable to strip prefix {:?} from {:?}",
+                                    source_path, full_path
+                                )
+                            })?;
+                        let source = source.join(relative_path);
+                        let destination = destination.join(relative_path);
                         println!("Installing {:?} to {:?}", source, destination);
                         if dry_run {
                             return Ok(());
@@ -120,15 +138,9 @@ fn main() -> Result<()> {
                         fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
                             format!("unable to create directory {:?}", destination.parent())
                         })?;
-                        fs::copy(full_path, destination.join(relative_path)).with_context(
-                            || {
-                                format!(
-                                    "unable to copy file {:?} to {:?}",
-                                    full_path,
-                                    destination.join(relative_path)
-                                )
-                            },
-                        )?;
+                        fs::copy(full_path, &destination).with_context(|| {
+                            format!("unable to copy file {:?} to {:?}", full_path, destination)
+                        })?;
 
                         Ok(())
                     })?;
