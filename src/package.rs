@@ -18,6 +18,7 @@ pub enum Type {
 pub struct Package {
     name: String,
     version: String,
+    #[serde(rename(deserialize = "type"))]
     program_type: Type,
     #[serde(default)]
     exe: Vec<Install>,
