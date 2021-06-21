@@ -79,7 +79,7 @@ impl Config {
             bindir: Some(".local/bin".to_string()),
             libdir: Some(".local/lib".to_string()),
             datarootdir: Some("@XDG_DATA_HOME@".to_string()),
-            datadir: Some("@XDG_DATA_HOME@/share".to_string()),
+            datadir: Some("@XDG_DATA_HOME@".to_string()),
             sysconfdir: Some("@XDG_CONFIG_HOME@".to_string()),
             localstatedir: Some("@XDG_STATE_HOME@".to_string()),
             runstatedir: Some("@XDG_RUNTIME_DIR@".to_string()),
