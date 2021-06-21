@@ -59,6 +59,7 @@ fn main() -> Result<()> {
         env::current_dir().context("unable to get current directory")?,
         PathBuf::from,
     );
+    let destdir = opts.destdir.clone();
 
     if root_install {
         config.merge_root_conf(opts);
@@ -87,6 +88,15 @@ fn main() -> Result<()> {
                 destination,
             } = install;
             let destination = destination.as_ref().unwrap();
+            // handle destdir
+            let destination = destdir.as_ref().map_or(destination.to_owned(), |destdir| {
+                // join does not work when the argument (not the self) is an absolute path
+                PathBuf::from({
+                    let mut s = destdir.clone();
+                    s.push_str(destination.as_os_str().to_str().unwrap());
+                    s
+                })
+            });
 
             let source_path = package_dir.join(source);
 

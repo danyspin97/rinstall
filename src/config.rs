@@ -20,6 +20,9 @@ pub struct Config {
     #[serde(skip_deserializing)]
     #[clap(short = 'p', long)]
     pub package_dir: Option<String>,
+    #[serde(skip_deserializing)]
+    #[clap(long)]
+    pub destdir: Option<String>,
     #[clap(long)]
     pub prefix: Option<String>,
     #[clap(long)]
@@ -53,6 +56,7 @@ impl Config {
             user: false,
             dry_run: false,
             package_dir: None,
+            destdir: None,
             prefix: Some("/usr/local".to_string()),
             exec_prefix: Some("@prefix@".to_string()),
             bindir: Some("@exec_prefix@/bin".to_string()),
@@ -74,6 +78,7 @@ impl Config {
             user: true,
             dry_run: false,
             package_dir: None,
+            destdir: None,
             prefix: None,
             exec_prefix: None,
             bindir: Some(".local/bin".to_string()),
