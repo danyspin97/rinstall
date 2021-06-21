@@ -1,6 +1,4 @@
-use std::env;
-
-use color_eyre::eyre::{ensure, Context, ContextCompat, Result};
+use color_eyre::eyre::{ensure, ContextCompat, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -18,9 +16,6 @@ impl Install {
         install_dir: &Path,
         parent_dir: Option<&Path>,
     ) -> Result<Self> {
-        let parent_dir = parent_dir
-            .map(PathBuf::from)
-            .unwrap_or(env::current_dir().context("unable to get current directory")?);
         let destination =
             Some(
                 install_dir.join(if let Some(destination) = self.destination {
@@ -40,8 +35,11 @@ impl Install {
             "the source file {:?} is not relative",
             self.source
         );
-        let source = parent_dir.join(self.source);
-        ensure!(source.exists(), "source file does not exists");
+        let source = if let Some(parent_dir) = parent_dir {
+            parent_dir.join(self.source)
+        } else {
+            self.source
+        };
 
         Ok(Install {
             source,

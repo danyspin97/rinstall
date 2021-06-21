@@ -1,7 +1,7 @@
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{Context, Result};
 use serde::Deserialize;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::Dirs;
 use crate::Install;
@@ -45,21 +45,22 @@ impl Package {
         };
 
         macro_rules! install_files {
-            ( $files:tt, $install_dir:expr, $parent_dir:expr ) => {
+            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
                 self.$files
                     .into_iter()
                     .map(|install| -> Result<Install> {
                         install.sanitize($install_dir, $parent_dir)
                     })
-                    .collect::<Result<Vec<Install>>>()?
+                    .collect::<Result<Vec<Install>>>()
+                    .with_context(|| format!("error while iterating {} files", $name))?
             };
         }
 
-        results.extend(install_files!(exe, &dirs.bindir, bin_local_root));
-        results.extend(install_files!(libs, &dirs.libdir, None));
-        results.extend(install_files!(data, &dirs.datadir, None));
+        results.extend(install_files!(exe, &dirs.bindir, bin_local_root, "exe"));
+        &results.extend(install_files!(libs, &dirs.libdir, None, "libs"));
+        &results.extend(install_files!(data, &dirs.datadir, None, "data"));
         if let Some(mandir) = &dirs.mandir {
-            results.extend(install_files!(man, mandir, None));
+            &results.extend(install_files!(man, mandir, None, "man"));
         }
 
         let package_dir = format!("{}-{}", self.name.to_owned(), self.version);
@@ -67,7 +68,8 @@ impl Package {
             results.extend(install_files!(
                 docs,
                 &docdir.join(Path::new(&package_dir)),
-                None
+                None,
+                "docs"
             ));
         }
 

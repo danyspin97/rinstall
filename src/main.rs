@@ -3,10 +3,10 @@ mod dirs;
 mod install;
 mod package;
 
-use std::{fs, path::PathBuf};
+use std::{env, fs, path::PathBuf};
 
 use clap::Clap;
-use color_eyre::eyre::{ensure, Context, Result};
+use color_eyre::eyre::{bail, ensure, Context, Result};
 use walkdir::WalkDir;
 use xdg::BaseDirectories;
 
@@ -55,6 +55,11 @@ fn main() -> Result<()> {
         }
     }
 
+    let package_dir = opts.package_dir.clone().map_or(
+        env::current_dir().context("unable to get current directory")?,
+        PathBuf::from,
+    );
+
     if root_install {
         config.merge_root_conf(opts);
         config.replace_root_placeholders();
@@ -68,8 +73,9 @@ fn main() -> Result<()> {
     let dirs = Dirs::new(config).context("unable to create dirs")?;
 
     let program: Package = serde_yaml::from_str(
-        &fs::read_to_string("install.yml")
-            .with_context(|| format!("unable to read file {:?}", config_file))?,
+        &fs::read_to_string(package_dir.join("install.yml")).with_context(|| {
+            format!("unable to read file {:?}", package_dir.join("install.yml"))
+        })?,
     )?;
 
     program
@@ -82,18 +88,22 @@ fn main() -> Result<()> {
             } = install;
             let destination = destination.as_ref().unwrap();
 
-            if source.is_file() {
+            let source_path = package_dir.join(source);
+
+            ensure!(source_path.exists(), "{:?} does not exists", source);
+
+            if source_path.is_file() {
                 println!("Installing {:?} to {:?}", source, destination);
                 if !dry_run {
                     fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
                         format!("unable to create directory {:?}", destination.parent())
                     })?;
-                    fs::copy(source, destination).with_context(|| {
+                    fs::copy(source_path, destination).with_context(|| {
                         format!("unable to copy file {:?} to {:?}", source, destination)
                     })?;
                 }
-            } else if source.is_dir() {
-                WalkDir::new(source)
+            } else if source_path.is_dir() {
+                WalkDir::new(source_path)
                     .into_iter()
                     .filter_entry(|entry| entry.path().is_file())
                     .try_for_each(|entry| -> Result<()> {
@@ -122,6 +132,8 @@ fn main() -> Result<()> {
 
                         Ok(())
                     })?;
+            } else {
+                bail!("{:?} is neither a file nor a directory", source);
             }
 
             Ok(())
