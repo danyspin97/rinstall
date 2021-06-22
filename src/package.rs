@@ -123,7 +123,7 @@ impl Package {
                                 source: path,
                                 destination: None,
                             },
-                            "usr/share/fish/vendor_completions.d",
+                            "fish/vendor_completions.d",
                         ),
                         Completion::Zsh(path) => (
                             Install {
