@@ -101,20 +101,35 @@ exe:
 The type part can either be `rust` or `custom`. In the former, the executable will be searched
 inside the folder `target/release` of the root directory.
 
+### Valid keys
+
 **rinstall** allows for the following keys:
 
-```
-exe
-libs
-man
-data
-docs
-```
+- `exe`, for the executables; they will be installed in `bindir` (which defaults to
+  `/usr/local/bin`)
+- `libs`, for the libraries; they will be installed in `libdir` (which defaults to `/usr/local/lib`)
+- `man`, for the man pages; they will be installed under the correct folder in `mandir`
+  (which defaults to `/usr/local/share/man`)
+- `data`, for architecture independent files; they will be installed in `datarootdir` (which
+  defaults to `/usr/local/share`)
+- `docs`, for documentation and examples; they will be installed in folder
+  `doc/<pkg-name>-<pkg-version>` under folder `datarootdir` (which defaults to
+  `/usr/local/share/doc/<pkg-name>-<pkg-version>`)
+- `config`, for configuration files; they will be installed in `sysconfdir` (which defaults to
+  `/usr/local/etc`)
+- `desktop-files`, for `.desktop` files; they will be installed in folder
+  `applications` under `datarootdir` (which defaults to `/usr/local/share/applications`)
+- `appdata`, for appdata files; they will be installed in folder
+  `appdata` under `datarootdir` (which defaults to `/usr/local/share/appdata`)
+- `completions`, for completions files; they will be installed in the respective shell completions
+  directory, under `datarootdir`:
+  + `bash-completion/completions` for *bash*
+  + `fish/vendor_completions.d` for *fish*
+  + `zsh/site-functions` for *zsh*
 
 ## TODO
 
 - Add `--reversible` (reverse the installation)
-- Add more keys in `install.yml`, like `completions`, `desktop-file`
 - Add `--exclude` flag
 
 ## License
