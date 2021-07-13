@@ -28,7 +28,6 @@ enum Completion {
 #[derive(Deserialize)]
 pub struct Package {
     name: String,
-    version: String,
     #[serde(rename(deserialize = "type"))]
     program_type: Type,
     #[serde(default)]
@@ -83,7 +82,7 @@ impl Package {
             results.extend(install_files!(man, mandir, None, "man"));
         }
 
-        let package_dir = format!("{}-{}", self.name.to_owned(), self.version);
+        let package_dir = self.name.to_owned();
         if let Some(docdir) = &dirs.docdir {
             results.extend(install_files!(
                 docs,
