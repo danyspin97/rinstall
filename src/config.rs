@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Clap;
-use color_eyre::eyre::{ContextCompat, Result};
+use color_eyre::eyre::{Context, ContextCompat, Result};
 use serde::Deserialize;
 use xdg::BaseDirectories;
 
@@ -172,11 +172,10 @@ impl Config {
             "@XDG_STATE_HOME@",
             PathBuf::from(".local/state")
         );
-        replace!(
-            runstatedir,
-            "@XDG_RUNTIME_DIR@",
-            xdg.place_runtime_file(".").unwrap()
-        );
+        let runtime_dir = xdg
+            .place_runtime_file(".")
+            .context("unable to get runtime directory")?;
+        replace!(runstatedir, "@XDG_RUNTIME_DIR@", runtime_dir);
 
         Ok(())
     }
