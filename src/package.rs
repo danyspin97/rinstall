@@ -52,7 +52,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn paths(
+    pub fn targets(
         self,
         dirs: Dirs,
     ) -> Result<Vec<InstallTarget>> {

@@ -81,7 +81,7 @@ fn main() -> Result<()> {
     )?;
 
     program
-        .paths(dirs)?
+        .targets(dirs)?
         .iter()
         .try_for_each(|install| -> Result<()> {
             let InstallTarget {
