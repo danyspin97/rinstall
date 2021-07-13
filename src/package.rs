@@ -3,8 +3,9 @@ use serde::Deserialize;
 
 use std::path::{Path, PathBuf};
 
+use crate::install_entry::InstallEntry;
+use crate::install_target::InstallTarget;
 use crate::Dirs;
-use crate::Install;
 
 #[derive(Deserialize)]
 pub enum Type {
@@ -31,21 +32,21 @@ pub struct Package {
     #[serde(rename(deserialize = "type"))]
     program_type: Type,
     #[serde(default)]
-    exe: Vec<Install>,
+    exe: Vec<InstallEntry>,
     #[serde(default)]
-    libs: Vec<Install>,
+    libs: Vec<InstallEntry>,
     #[serde(default)]
-    man: Vec<Install>,
+    man: Vec<InstallEntry>,
     #[serde(default)]
-    data: Vec<Install>,
+    data: Vec<InstallEntry>,
     #[serde(default)]
-    docs: Vec<Install>,
+    docs: Vec<InstallEntry>,
     #[serde(default)]
-    config: Vec<Install>,
+    config: Vec<InstallEntry>,
     #[serde(default, rename(deserialize = "desktop-files"))]
-    desktop_files: Vec<Install>,
+    desktop_files: Vec<InstallEntry>,
     #[serde(default)]
-    appdata: Vec<Install>,
+    appdata: Vec<InstallEntry>,
     #[serde(default)]
     completions: Vec<Completion>,
 }
@@ -54,7 +55,7 @@ impl Package {
     pub fn paths(
         self,
         dirs: Dirs,
-    ) -> Result<Vec<Install>> {
+    ) -> Result<Vec<InstallTarget>> {
         let mut results = Vec::new();
 
         let bin_local_root = match self.program_type {
@@ -66,10 +67,10 @@ impl Package {
             ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
                 self.$files
                     .into_iter()
-                    .map(|install| -> Result<Install> {
-                        install.sanitize($install_dir, $parent_dir)
+                    .map(|entry| -> Result<InstallTarget> {
+                        InstallTarget::new(entry, $install_dir, $parent_dir)
                     })
-                    .collect::<Result<Vec<Install>>>()
+                    .collect::<Result<Vec<InstallTarget>>>()
                     .with_context(|| format!("error while iterating {} files", $name))?
             };
         }
@@ -109,33 +110,33 @@ impl Package {
         results.extend(
             self.completions
                 .into_iter()
-                .map(|completion| -> Result<Install> {
-                    let (install, parent_dir) = match completion {
+                .map(|completion| -> Result<InstallTarget> {
+                    let (entry, parent_dir) = match completion {
                         Completion::Bash(path) => (
-                            Install {
+                            InstallEntry {
                                 source: path,
                                 destination: None,
                             },
                             "bash-completion/completions",
                         ),
                         Completion::Fish(path) => (
-                            Install {
+                            InstallEntry {
                                 source: path,
                                 destination: None,
                             },
                             "fish/vendor_completions.d",
                         ),
                         Completion::Zsh(path) => (
-                            Install {
+                            InstallEntry {
                                 source: path,
                                 destination: None,
                             },
                             "zsh/site-functions",
                         ),
                     };
-                    install.sanitize(&dirs.datarootdir.join(parent_dir), None)
+                    InstallTarget::new(entry, &dirs.datarootdir.join(parent_dir), None)
                 })
-                .collect::<Result<Vec<Install>>>()
+                .collect::<Result<Vec<InstallTarget>>>()
                 .context("error while iterating completion files")?,
         );
 

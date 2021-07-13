@@ -1,6 +1,7 @@
 mod config;
 mod dirs;
-mod install;
+mod install_entry;
+mod install_target;
 mod package;
 
 use std::{env, fs, path::PathBuf};
@@ -12,7 +13,7 @@ use xdg::BaseDirectories;
 
 use config::Config;
 use dirs::Dirs;
-use install::Install;
+use install_target::InstallTarget;
 use package::Package;
 
 fn main() -> Result<()> {
@@ -83,11 +84,10 @@ fn main() -> Result<()> {
         .paths(dirs)?
         .iter()
         .try_for_each(|install| -> Result<()> {
-            let Install {
+            let InstallTarget {
                 source,
                 destination,
             } = install;
-            let destination = destination.as_ref().unwrap();
             // handle destdir
             let destination = destdir.as_ref().map_or(destination.to_owned(), |destdir| {
                 // join does not work when the argument (not the self) is an absolute path
