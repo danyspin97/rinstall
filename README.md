@@ -90,10 +90,10 @@ Example file:
 ```yaml
 name: rinstall
 version: 0.1
-program_type: rust
+type: rust
 exe:
   - src: rinstall
-- docs:
+docs:
   - src: LICENSE.md
   - src: README.md
 ```
