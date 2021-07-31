@@ -54,6 +54,18 @@ $ rinstall --user
 
 ## Configuration
 
+The installation directories chosen by rinstall can be configured by adding and tweaking the
+file `rinstall.yml` under the `sysconfdir`. By default, `/etc/rinstall.yml` and
+`$HOME/.config/rinstall.yml` will be used respectively for the root user and the non-root user.
+
+The root configuration should already be installed by the rinstall package of your distribution and
+it can also be found in the `config/root/` directory of this repository; the non-root user
+configuration can be found in the `config/user/` directory. All the placeholders will be replaced at runtime by **rinstall**.
+
+Additionally, a different configuration file can be passed by using the `--config` (or `-c`)
+command line argument. All the values can also be overridden when invoking rinstall by using
+the respective command line arguments.
+
 The configuration is a YAML file that can contains the following keys:
 
 ```
@@ -72,11 +84,6 @@ mandir
 ```
 
 Please refer to the [Directory Variables] for their usage.
-
-`rinstall_user.yml` and `rinstall_root.yml` represent respectively the default user and default
-root configurations. The placeholders will be replaced at runtime by **rinstall**.
-
-The user can also override the configuration by using command line arguments.
 
 ## Writing `install.yml`
 
