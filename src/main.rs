@@ -74,10 +74,23 @@ fn main() -> Result<()> {
 
     let dirs = Dirs::new(config).context("unable to create dirs")?;
 
+    // Try root/install.yml and root/.packaging/install.yml files
+    let install_spec = {
+        let install_spec = package_dir.join("install.yml");
+        if install_spec.exists() {
+            install_spec
+        } else {
+            let install_spec = package_dir.join(".packaging").join("install.yml");
+            if install_spec.exists() {
+                install_spec
+            } else {
+                bail!("unable to find 'install.yml' file");
+            }
+        }
+    };
     let program: Package = serde_yaml::from_str(
-        &fs::read_to_string(package_dir.join("install.yml")).with_context(|| {
-            format!("unable to read file {:?}", package_dir.join("install.yml"))
-        })?,
+        &fs::read_to_string(&install_spec)
+            .with_context(|| format!("unable to read file {:?}", install_spec))?,
     )?;
 
     program

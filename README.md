@@ -39,8 +39,10 @@ $ ./target/release/rinstall --user
 
 ## Usage
 
-In a project with the `install.yml` file present, run the following command as root to perform a
-system-wide installation:
+If the project has an `install.yml` file present, either in the root directory or in the
+`.package` directory, it supports installation via **rinstall**.
+
+Run the following command as root to perform a system-wide installation:
 
 ```
 # rinstall
