@@ -21,13 +21,14 @@ tasks:
   - audit: |
       cd "$pkg"
       cargo audit
-  - check-unused-deps: |
-      cd "$pkg"
-      res=$(cargo udeps)
-      if [[ "$res" != "All dependencies are up to date, yay!" ]];
-          echo $res
-          exit 1
-      fi
+  # Cargo deps require Rust nightly as of version 1.54.0
+  #- check-unused-deps: |
+  #    cd "$pkg"
+  #    res=$(cargo udeps)
+  #    if [[ "$res" != "All dependencies are up to date, yay!" ]];
+  #        echo $res
+  #        exit 1
+  #    fi
   - spellcheck: |
       cd "$pkg"
       cargo spellcheck --code=1
