@@ -74,13 +74,13 @@ fn main() -> Result<()> {
 
     let dirs = Dirs::new(config).context("unable to create dirs")?;
 
-    // Try root/install.yml and root/.packaging/install.yml files
+    // Try root/install.yml and root/.package/install.yml files
     let install_spec = {
         let install_spec = package_dir.join("install.yml");
         if install_spec.exists() {
             install_spec
         } else {
-            let install_spec = package_dir.join(".packaging").join("install.yml");
+            let install_spec = package_dir.join(".package").join("install.yml");
             if install_spec.exists() {
                 install_spec
             } else {
