@@ -1,9 +1,9 @@
 use color_eyre::eyre::{Context, Result};
 use serde::Deserialize;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::install_entry::InstallEntry;
+use crate::install_entry::{string_or_struct, InstallEntry};
 use crate::install_target::InstallTarget;
 use crate::project::Project;
 use crate::Dirs;
@@ -18,12 +18,12 @@ pub enum Type {
 
 #[derive(Deserialize)]
 enum Completion {
-    #[serde(rename(deserialize = "bash"))]
-    Bash(PathBuf),
-    #[serde(rename(deserialize = "fish"))]
-    Fish(PathBuf),
-    #[serde(rename(deserialize = "zsh"))]
-    Zsh(PathBuf),
+    #[serde(rename(deserialize = "bash"), deserialize_with = "string_or_struct")]
+    Bash(InstallEntry),
+    #[serde(rename(deserialize = "fish"), deserialize_with = "string_or_struct")]
+    Fish(InstallEntry),
+    #[serde(rename(deserialize = "zsh"), deserialize_with = "string_or_struct")]
+    Zsh(InstallEntry),
 }
 
 #[derive(Deserialize)]
@@ -123,27 +123,9 @@ impl Package {
                 .into_iter()
                 .map(|completion| -> Result<InstallTarget> {
                     let (entry, parent_dir) = match completion {
-                        Completion::Bash(path) => (
-                            InstallEntry {
-                                source: path,
-                                destination: None,
-                            },
-                            "bash-completion/completions",
-                        ),
-                        Completion::Fish(path) => (
-                            InstallEntry {
-                                source: path,
-                                destination: None,
-                            },
-                            "fish/vendor_completions.d",
-                        ),
-                        Completion::Zsh(path) => (
-                            InstallEntry {
-                                source: path,
-                                destination: None,
-                            },
-                            "zsh/site-functions",
-                        ),
+                        Completion::Bash(entry) => (entry, "bash-completion/completions"),
+                        Completion::Fish(entry) => (entry, "fish/vendor_completions.d"),
+                        Completion::Zsh(entry) => (entry, "zsh/site-functions"),
                     };
                     InstallTarget::new(
                         entry,
