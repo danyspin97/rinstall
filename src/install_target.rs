@@ -12,7 +12,7 @@ impl InstallTarget {
     pub fn new(
         entry: InstallEntry,
         install_dir: &Path,
-        parent_dir: Option<&Path>,
+        parent_dir: &Path,
     ) -> Result<Self> {
         let destination = install_dir.join(if let Some(destination) = entry.destination {
             ensure!(
@@ -33,11 +33,7 @@ impl InstallTarget {
             "the source file {:?} is not relative",
             entry.source
         );
-        let source = if let Some(parent_dir) = parent_dir {
-            parent_dir.join(entry.source)
-        } else {
-            entry.source
-        };
+        let source = parent_dir.join(entry.source);
 
         Ok(Self {
             source,

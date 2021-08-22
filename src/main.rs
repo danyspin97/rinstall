@@ -3,6 +3,7 @@ mod dirs;
 mod install_entry;
 mod install_target;
 mod package;
+mod project;
 
 use std::{env, fs, path::PathBuf};
 
@@ -15,6 +16,7 @@ use config::Config;
 use dirs::Dirs;
 use install_target::InstallTarget;
 use package::Package;
+use project::Project;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -93,8 +95,13 @@ fn main() -> Result<()> {
             .with_context(|| format!("unable to read file {:?}", install_spec))?,
     )?;
 
+    let project_type = program.project_type.clone();
+
     program
-        .targets(dirs)?
+        .targets(
+            dirs,
+            Project::new_from_type(project_type, package_dir.clone())?,
+        )?
         .iter()
         .try_for_each(|install| -> Result<()> {
             let InstallTarget {
@@ -111,11 +118,9 @@ fn main() -> Result<()> {
                 })
             });
 
-            let source_path = package_dir.join(source);
+            ensure!(source.exists(), "{:?} does not exists", source);
 
-            ensure!(source_path.exists(), "{:?} does not exists", source);
-
-            if source_path.is_file() {
+            if source.is_file() {
                 let destination = if destination.as_os_str().to_str().unwrap().ends_with('/') {
                     destination.join(
                         source
@@ -125,17 +130,21 @@ fn main() -> Result<()> {
                 } else {
                     destination.to_owned()
                 };
-                println!("Installing {:?} to {:?}", source, destination);
+                println!(
+                    "Installing {:?} to {:?}",
+                    source.strip_prefix(&package_dir).unwrap_or(&source),
+                    destination
+                );
                 if !dry_run {
                     fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
                         format!("unable to create directory {:?}", destination.parent())
                     })?;
-                    fs::copy(source_path, &destination).with_context(|| {
+                    fs::copy(source, &destination).with_context(|| {
                         format!("unable to copy file {:?} to {:?}", source, destination)
                     })?;
                 }
-            } else if source_path.is_dir() {
-                WalkDir::new(&source_path)
+            } else if source.is_dir() {
+                WalkDir::new(&source)
                     .into_iter()
                     .try_for_each(|entry| -> Result<()> {
                         let entry = entry?;
@@ -144,13 +153,9 @@ fn main() -> Result<()> {
                         }
 
                         let full_path = entry.path();
-                        let relative_path =
-                            full_path.strip_prefix(&source_path).with_context(|| {
-                                format!(
-                                    "unable to strip prefix {:?} from {:?}",
-                                    source_path, full_path
-                                )
-                            })?;
+                        let relative_path = full_path.strip_prefix(&source).with_context(|| {
+                            format!("unable to strip prefix {:?} from {:?}", source, full_path)
+                        })?;
                         let source = source.join(relative_path);
                         let destination = destination.join(relative_path);
                         println!("Installing {:?} to {:?}", source, destination);

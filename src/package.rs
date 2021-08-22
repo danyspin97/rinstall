@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 
 use crate::install_entry::InstallEntry;
 use crate::install_target::InstallTarget;
+use crate::project::Project;
 use crate::Dirs;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub enum Type {
     #[serde(rename(deserialize = "custom"))]
     Custom,
@@ -29,7 +30,7 @@ enum Completion {
 pub struct Package {
     name: String,
     #[serde(rename(deserialize = "type"))]
-    program_type: Type,
+    pub project_type: Type,
     #[serde(default)]
     exe: Vec<InstallEntry>,
     #[serde(default)]
@@ -54,13 +55,9 @@ impl Package {
     pub fn targets(
         self,
         dirs: Dirs,
+        project: Project,
     ) -> Result<Vec<InstallTarget>> {
         let mut results = Vec::new();
-
-        let bin_local_root = match self.program_type {
-            Type::Rust => Some(Path::new("target/release")),
-            Type::Custom => None,
-        };
 
         macro_rules! install_files {
             ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
@@ -74,20 +71,35 @@ impl Package {
             };
         }
 
-        results.extend(install_files!(exe, &dirs.bindir, bin_local_root, "exe"));
-        results.extend(install_files!(libs, &dirs.libdir, None, "libs"));
-        results.extend(install_files!(data, &dirs.datadir, None, "data"));
-        results.extend(install_files!(config, &dirs.sysconfdir, None, "config"));
+        results.extend(install_files!(exe, &dirs.bindir, &project.outputdir, "exe"));
+        results.extend(install_files!(
+            libs,
+            &dirs.libdir,
+            &project.projectdir,
+            "libs"
+        ));
+        results.extend(install_files!(
+            data,
+            &dirs.datadir,
+            &project.projectdir,
+            "data"
+        ));
+        results.extend(install_files!(
+            config,
+            &dirs.sysconfdir,
+            &project.projectdir,
+            "config"
+        ));
         if let Some(mandir) = &dirs.mandir {
-            results.extend(install_files!(man, mandir, None, "man"));
+            results.extend(install_files!(man, mandir, &project.projectdir, "man"));
         }
 
-        let package_dir = self.name.to_owned();
+        let package_doc_dir = self.name.to_owned();
         if let Some(docdir) = &dirs.docdir {
             results.extend(install_files!(
                 docs,
-                &docdir.join(Path::new(&package_dir)),
-                None,
+                &docdir.join(Path::new(&package_doc_dir)),
+                &project.projectdir,
                 "docs"
             ));
         }
@@ -95,14 +107,14 @@ impl Package {
         results.extend(install_files!(
             desktop_files,
             &dirs.datarootdir.join("applications"),
-            None,
+            &project.projectdir,
             "desktop"
         ));
 
         results.extend(install_files!(
             appdata,
             &dirs.datarootdir.join("appdata"),
-            None,
+            &project.projectdir,
             "appdata"
         ));
 
@@ -133,7 +145,11 @@ impl Package {
                             "zsh/site-functions",
                         ),
                     };
-                    InstallTarget::new(entry, &dirs.datarootdir.join(parent_dir), None)
+                    InstallTarget::new(
+                        entry,
+                        &dirs.datarootdir.join(parent_dir),
+                        &project.projectdir,
+                    )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
                 .context("error while iterating completion files")?,
