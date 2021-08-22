@@ -90,7 +90,7 @@ impl Package {
         results.extend(install_files!(
             libs,
             &dirs.libdir,
-            &project.projectdir,
+            &project.outputdir,
             "libs"
         ));
         results.extend(install_files!(
