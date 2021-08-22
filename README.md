@@ -1,5 +1,7 @@
 # rinstall
 
+[![builds.sr.ht status](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml.svg)](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml?)
+
 rinstall is an helper tool that installs software and additional data into the system.
 Many programs often include man pages, documentation, config files and there is no standard
 way to install them except for using Makefiles. However, Makefiles are notoriously complicated to
@@ -19,7 +21,6 @@ or `.config/rinstall.yml`, using a default one otherwise.
 ## Features
 
 - Shift the install phase from packagers to developers
-- Fast
 - Flexible and configurable
 - Reproducible installation
 
@@ -91,8 +92,7 @@ Please refer to the [Directory Variables] for their usage.
 
 To support rinstall, place an `install.yml` file into the root of your project. This file
 shall contains at least the name and the version of the program to install and its type. Then it
-allows a list of files to install differentiated by their type. Each file to install shall contains
-the source (`src`) part and optionally a destination (`dst`) part.
+allows a list of entries differentiated by their type.
 
 Example file:
 
@@ -101,14 +101,47 @@ name: rinstall
 version: 0.1
 type: rust
 exe:
-  - src: rinstall
+  - rinstall
 docs:
-  - src: LICENSE.md
-  - src: README.md
+  - LICENSE.md
+  - README.md
 ```
 
-The type part can either be `rust` or `custom`. In the former, the executable will be searched
-inside the folder `target/release` of the root directory.
+### Entries
+Each entry list a file to install and it shall either be a string or a struct containing the
+following data:
+
+- `src`: the source, containing the location to the file that will be installed. Unless noted,
+  it shall always be relative to the project directory.
+- `dst`: the destination (_optional_), containing the directory or file where that this entry
+  should be installed to. It shall always be relative, the corresponding system directory will
+  be appended based on the type of entry; e.g. for `exe` entries, the destination part will be
+  appended to `bindir`. To mark the destination as a directory, add a leading path separator `/`.
+
+When the entry is only a string, it shall contains the source and follows the same rules as `src`.
+
+Example entry defined by a struct:
+
+```yaml
+src: myprog.sh
+dst: myprog
+```
+
+Example entry where destination is a directory:
+```yaml
+src: myprog
+dst: internaldir/
+```
+
+### Type
+
+The type part can either be `rust` or `custom`.
+
+#### `rust`
+
+Use `rust` type when the project is built using `cargo`. By doing so the target directory
+(fetched using `cargo metadata`) will be used as root for executables and libraries.
+I.e. you don't need to use `target/release/myexe` when listing executables, but just `myexe`.
 
 ### Valid keys
 
