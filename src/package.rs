@@ -17,13 +17,20 @@ pub enum Type {
 }
 
 #[derive(Deserialize)]
+#[serde(untagged)]
 enum Completion {
-    #[serde(rename(deserialize = "bash"), deserialize_with = "string_or_struct")]
-    Bash(InstallEntry),
-    #[serde(rename(deserialize = "fish"), deserialize_with = "string_or_struct")]
-    Fish(InstallEntry),
-    #[serde(rename(deserialize = "zsh"), deserialize_with = "string_or_struct")]
-    Zsh(InstallEntry),
+    #[serde(deserialize_with = "string_or_struct")]
+    InstallEntry(InstallEntry),
+}
+
+#[derive(Deserialize, Default)]
+struct Completions {
+    #[serde(default)]
+    pub bash: Vec<Completion>,
+    #[serde(default)]
+    pub fish: Vec<Completion>,
+    #[serde(default)]
+    pub zsh: Vec<Completion>,
 }
 
 #[derive(Deserialize)]
@@ -48,7 +55,7 @@ pub struct Package {
     #[serde(default)]
     appdata: Vec<InstallEntry>,
     #[serde(default)]
-    completions: Vec<Completion>,
+    completions: Completions,
 }
 
 impl Package {
@@ -120,16 +127,27 @@ impl Package {
 
         results.extend(
             self.completions
+                .bash
                 .into_iter()
-                .map(|completion| -> Result<InstallTarget> {
-                    let (entry, parent_dir) = match completion {
-                        Completion::Bash(entry) => (entry, "bash-completion/completions"),
-                        Completion::Fish(entry) => (entry, "fish/vendor_completions.d"),
-                        Completion::Zsh(entry) => (entry, "zsh/site-functions"),
-                    };
+                .map(|completion| (completion, "bash-completion/completions"))
+                .chain(
+                    self.completions
+                        .fish
+                        .into_iter()
+                        .map(|completion| (completion, "fish/vendor_completions.d")),
+                )
+                .chain(
+                    self.completions
+                        .zsh
+                        .into_iter()
+                        .map(|completion| (completion, "zsh/site-functions")),
+                )
+                .map(|(completion, completionsdir)| -> Result<InstallTarget> {
                     InstallTarget::new(
-                        entry,
-                        &dirs.datarootdir.join(parent_dir),
+                        match completion {
+                            Completion::InstallEntry(entry) => entry,
+                        },
+                        &dirs.datarootdir.join(completionsdir),
                         &project.projectdir,
                     )
                 })

@@ -162,6 +162,21 @@ directory, under `datarootdir`:
 - `fish/vendor_completions.d` for *fish*
 - `zsh/site-functions` for *zsh*
 
+Example:
+
+```yaml
+completions:
+  bash:
+    - cat.bash
+    - cp.bash
+  fish:
+    - cat.fish
+    - cp.fish
+  zsh:
+    - _cat
+    - _cp
+```
+
 ## TODO
 
 - Add `--reversible` (reverse the installation)
