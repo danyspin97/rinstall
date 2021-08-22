@@ -2,7 +2,7 @@ name: rinstall
 version: 0.1
 type: rust
 exe:
-  - src: rinstall
+  - rinstall
 docs:
-  - src: LICENSE.md
-  - src: README.md
+  - LICENSE.md
+  - README.md

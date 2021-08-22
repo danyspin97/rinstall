@@ -18,7 +18,7 @@ pub enum Type {
 
 #[derive(Deserialize)]
 #[serde(untagged)]
-enum Completion {
+enum Entry {
     #[serde(deserialize_with = "string_or_struct")]
     InstallEntry(InstallEntry),
 }
@@ -26,11 +26,11 @@ enum Completion {
 #[derive(Deserialize, Default)]
 struct Completions {
     #[serde(default)]
-    pub bash: Vec<Completion>,
+    pub bash: Vec<Entry>,
     #[serde(default)]
-    pub fish: Vec<Completion>,
+    pub fish: Vec<Entry>,
     #[serde(default)]
-    pub zsh: Vec<Completion>,
+    pub zsh: Vec<Entry>,
 }
 
 #[derive(Deserialize)]
@@ -39,23 +39,31 @@ pub struct Package {
     #[serde(rename(deserialize = "type"))]
     pub project_type: Type,
     #[serde(default)]
-    exe: Vec<InstallEntry>,
+    exe: Vec<Entry>,
     #[serde(default)]
-    libs: Vec<InstallEntry>,
+    libs: Vec<Entry>,
     #[serde(default)]
-    man: Vec<InstallEntry>,
+    man: Vec<Entry>,
     #[serde(default)]
-    data: Vec<InstallEntry>,
+    data: Vec<Entry>,
     #[serde(default)]
-    docs: Vec<InstallEntry>,
+    docs: Vec<Entry>,
     #[serde(default)]
-    config: Vec<InstallEntry>,
+    config: Vec<Entry>,
     #[serde(default, rename(deserialize = "desktop-files"))]
-    desktop_files: Vec<InstallEntry>,
+    desktop_files: Vec<Entry>,
     #[serde(default)]
-    appdata: Vec<InstallEntry>,
+    appdata: Vec<Entry>,
     #[serde(default)]
     completions: Completions,
+}
+
+macro_rules! entry {
+    ( $x:ident ) => {
+        match $x {
+            Entry::InstallEntry(entry) => entry,
+        }
+    };
 }
 
 impl Package {
@@ -71,7 +79,7 @@ impl Package {
                 self.$files
                     .into_iter()
                     .map(|entry| -> Result<InstallTarget> {
-                        InstallTarget::new(entry, $install_dir, $parent_dir)
+                        InstallTarget::new(entry!(entry), $install_dir, $parent_dir)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
                     .with_context(|| format!("error while iterating {} files", $name))?
@@ -142,11 +150,9 @@ impl Package {
                         .into_iter()
                         .map(|completion| (completion, "zsh/site-functions")),
                 )
-                .map(|(completion, completionsdir)| -> Result<InstallTarget> {
+                .map(|(entry, completionsdir)| -> Result<InstallTarget> {
                     InstallTarget::new(
-                        match completion {
-                            Completion::InstallEntry(entry) => entry,
-                        },
+                        entry!(entry),
                         &dirs.datarootdir.join(completionsdir),
                         &project.projectdir,
                     )
