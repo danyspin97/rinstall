@@ -128,11 +128,11 @@ fn main() -> Result<()> {
                             .with_context(|| format!("unable to get filename for {:?}", source))?,
                     )
                 } else {
-                    destination.to_owned()
+                    destination
                 };
                 println!(
                     "Installing {:?} to {:?}",
-                    source.strip_prefix(&package_dir).unwrap_or(&source),
+                    source.strip_prefix(&package_dir).unwrap_or(source),
                     destination
                 );
                 if !dry_run {
