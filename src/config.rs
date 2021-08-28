@@ -12,11 +12,11 @@ pub struct Config {
     #[clap(short, long)]
     pub config: Option<String>,
     #[serde(skip_deserializing)]
-    #[clap(short, long)]
-    pub user: bool,
+    #[clap(long = "system")]
+    pub system: bool,
     #[serde(skip_deserializing)]
-    #[clap(short = 'n', long)]
-    pub dry_run: bool,
+    #[clap(short = 'y', long = "yes")]
+    pub accept_changes: bool,
     #[serde(skip_deserializing)]
     #[clap(short = 'p', long)]
     pub package_dir: Option<String>,
@@ -53,8 +53,8 @@ impl Config {
     pub fn new_default_root() -> Self {
         Self {
             config: None,
-            user: false,
-            dry_run: false,
+            system: true,
+            accept_changes: false,
             package_dir: None,
             destdir: None,
             prefix: Some("/usr/local".to_string()),
@@ -75,8 +75,8 @@ impl Config {
     pub fn new_default_user() -> Self {
         Self {
             config: None,
-            user: true,
-            dry_run: false,
+            system: false,
+            accept_changes: false,
             package_dir: None,
             destdir: None,
             prefix: None,

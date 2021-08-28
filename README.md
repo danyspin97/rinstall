@@ -35,7 +35,7 @@ $ cargo build --release
 To install rinstall for the current user:
 
 ```
-$ ./target/release/rinstall --user
+$ ./target/release/rinstall -y
 ```
 
 ## Usage
@@ -43,17 +43,39 @@ $ ./target/release/rinstall --user
 If the project has an `install.yml` file present, either in the root directory or in the
 `.package` directory, it supports installation via **rinstall**.
 
-Run the following command as root to perform a system-wide installation:
+Run rinstall as your user to see the changes that will be done to the filesystem:
+
+```
+$ rinstall
+```
+
+After having reviewd the changes, add `-y` or `--yes` to perform an user installation:
+
+```
+$ rinstall -y
+```
+
+The same apply for performing a system-wide installation. Run **rinstall** as root and it
+automatically switch to system-wide mode. To list the changes made to the filesystem,
+run **rinstall without any arguments:
 
 ```
 # rinstall
 ```
 
-To perform an user installation:
+To accept the changes, run again the command and append `-y` or `--yes`:
 
 ```
-$ rinstall --user
+# rinstall -y
 ```
+
+You can also review the changes of a system-wide installation while running **rinstall** as
+a non-privileged user:
+
+```
+$ rinstall --system
+```
+
 
 ## Configuration
 

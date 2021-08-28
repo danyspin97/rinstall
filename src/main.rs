@@ -21,13 +21,19 @@ use project::Project;
 fn main() -> Result<()> {
     color_eyre::install()?;
     let opts = Config::parse();
-    let dry_run = opts.dry_run;
-    let root_install = !opts.user;
+    let dry_run = !opts.accept_changes;
     let uid = unsafe { libc::getuid() };
-    ensure!(
-        dry_run || !root_install || uid == 0,
-        "need either root privileges or --user flag"
-    );
+    let root_install = if !opts.system {
+        uid == 0
+    } else {
+        if uid != 0 {
+            ensure!(
+                (!opts.system || dry_run),
+                "Run rinstall as root to execute a system installation"
+            );
+        }
+        opts.system
+    };
 
     let mut config = if root_install {
         Config::new_default_root()

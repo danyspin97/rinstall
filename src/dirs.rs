@@ -4,8 +4,6 @@ use std::path::PathBuf;
 use crate::Config;
 
 pub struct Dirs {
-    pub user: bool,
-    pub dry_run: bool,
     pub prefix: Option<PathBuf>,
     pub exec_prefix: Option<PathBuf>,
     pub bindir: PathBuf,
@@ -23,8 +21,6 @@ pub struct Dirs {
 impl Dirs {
     pub fn new(config: Config) -> Result<Dirs> {
         let mut dirs = Self {
-            user: config.user,
-            dry_run: config.dry_run,
             prefix: config.prefix.map(PathBuf::from),
             exec_prefix: config.exec_prefix.map(PathBuf::from),
             bindir: PathBuf::from(config.bindir.unwrap()),
@@ -39,7 +35,7 @@ impl Dirs {
             mandir: config.mandir.map(PathBuf::from),
         };
 
-        if dirs.user {
+        if config.system {
             dirs.append_home();
         }
         dirs.check_absolute_paths()?;
