@@ -137,7 +137,12 @@ fn main() -> Result<()> {
                     destination
                 };
                 println!(
-                    "Installing {:?} to {:?}",
+                    "{} {:?} -> {:?}",
+                    if dry_run {
+                        "Would install:"
+                    } else {
+                        "Installing"
+                    },
                     source.strip_prefix(&package_dir).unwrap_or(source),
                     destination
                 );
