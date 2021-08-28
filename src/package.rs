@@ -69,7 +69,7 @@ macro_rules! entry {
 impl Package {
     pub fn targets(
         self,
-        dirs: Dirs,
+        dirs: &Dirs,
         project: Project,
     ) -> Result<Vec<InstallTarget>> {
         let mut results = Vec::new();

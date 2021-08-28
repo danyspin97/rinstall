@@ -6,6 +6,7 @@ use crate::install_entry::InstallEntry;
 pub struct InstallTarget {
     pub source: PathBuf,
     pub destination: PathBuf,
+    pub templating: bool,
 }
 
 impl InstallTarget {
@@ -38,6 +39,7 @@ impl InstallTarget {
         Ok(Self {
             source,
             destination,
+            templating: entry.templating,
         })
     }
 }

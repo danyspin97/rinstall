@@ -5,7 +5,12 @@ mod install_target;
 mod package;
 mod project;
 
-use std::{env, fs, path::PathBuf};
+use std::{
+    env,
+    fs::{self, File},
+    io::{BufWriter, Write},
+    path::PathBuf,
+};
 
 use clap::Clap;
 use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
@@ -105,7 +110,7 @@ fn main() -> Result<()> {
 
     program
         .targets(
-            dirs,
+            &dirs,
             Project::new_from_type(project_type, package_dir.clone())?,
         )?
         .iter()
@@ -113,6 +118,7 @@ fn main() -> Result<()> {
             let InstallTarget {
                 source,
                 destination,
+                templating,
             } = install;
             // handle destdir
             let destination = destdir.as_ref().map_or(destination.to_owned(), |destdir| {
@@ -150,9 +156,27 @@ fn main() -> Result<()> {
                     fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
                         format!("unable to create directory {:?}", destination.parent())
                     })?;
-                    fs::copy(source, &destination).with_context(|| {
-                        format!("unable to copy file {:?} to {:?}", source, destination)
-                    })?;
+                    if *templating {
+                        let contents = fs::read_to_string(source)
+                            .with_context(|| format!("unable to read file {:?}", source))?;
+                        BufWriter::new(
+                            File::create(&destination).with_context(|| {
+                                format!("unable to create file {:?}", destination)
+                            })?,
+                        )
+                        .write(
+                            apply_templating_to(contents, &dirs)
+                                .with_context(|| {
+                                    format!("unable to apply templating to {:?}", source)
+                                })?
+                                .as_bytes(),
+                        )
+                        .with_context(|| format!("unable to write to file {:?}", destination))?;
+                    } else {
+                        fs::copy(source, &destination).with_context(|| {
+                            format!("unable to copy file {:?} to {:?}", source, destination)
+                        })?;
+                    }
                 }
             } else if source.is_dir() {
                 WalkDir::new(&source)
@@ -191,4 +215,58 @@ fn main() -> Result<()> {
         })?;
 
     Ok(())
+}
+
+fn apply_templating_to(
+    s: String,
+    dirs: &Dirs,
+) -> Result<String> {
+    let mut s = s;
+
+    macro_rules! replace_impl {
+        ( $dir:expr, $needle:literal ) => {
+            s = s.replace(
+                $needle,
+                $dir.as_os_str()
+                    .to_str()
+                    .with_context(|| format!("unable to convert {:?} to String", $dir))?,
+            );
+        };
+    }
+
+    macro_rules! replace {
+        ( $dir:ident, $needle:literal ) => {
+            replace_impl!(&dirs.$dir, $needle);
+        };
+    }
+
+    macro_rules! replace_when_some {
+        ( $dir:ident, $needle:literal ) => {
+            if let Some($dir) = &dirs.$dir {
+                replace_impl!($dir, $needle);
+            } else {
+                // TODO: Is this needed?
+                ensure!(
+                    !s.contains($needle),
+                    "tried replacing {} when its value is none",
+                    $needle
+                );
+            }
+        };
+    }
+
+    replace_when_some!(prefix, "@prefix@");
+    replace_when_some!(exec_prefix, "@exec_prefix@");
+    replace!(bindir, "@bindir@");
+    replace!(libdir, "@libdir@");
+    replace!(datarootdir, "@datarootdir@");
+    replace!(datadir, "@datadir@");
+    replace!(sysconfdir, "@sysconfdir@");
+    replace!(localstatedir, "@localstatedir@");
+    replace!(runstatedir, "@runstatedir@");
+    replace_when_some!(includedir, "@includedir@");
+    replace_when_some!(docdir, "@docdir@");
+    replace_when_some!(mandir, "@mandir@");
+
+    Ok(s)
 }
