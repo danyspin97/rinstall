@@ -19,19 +19,26 @@ impl Project {
     ) -> Result<Self> {
         Ok(match project_type {
             Type::Rust => Self {
-                outputdir: PathBuf::from(
-                    json::parse(&String::from_utf8_lossy(
-                        &Command::new("cargo")
-                            .arg("metadata")
-                            .output()
-                            .context("unable to run `cargo metadata`")?
-                            .stdout,
-                    ))
-                    .context("unable to parse JSON from `cargo metadata` output")?
-                        ["target_directory"]
-                        .to_string(),
-                )
-                .join("release"),
+                // cargo metadata only works when running as the current user that has built
+                // the project. Otherwise it will use metadata for the root user and
+                // it is almost never what we want
+                outputdir: if unsafe { libc::getuid() } != 0 {
+                    PathBuf::from(
+                        json::parse(&String::from_utf8_lossy(
+                            &Command::new("cargo")
+                                .arg("metadata")
+                                .output()
+                                .context("unable to run `cargo metadata`")?
+                                .stdout,
+                        ))
+                        .context("unable to parse JSON from `cargo metadata` output")?
+                            ["target_directory"]
+                            .to_string(),
+                    )
+                    .join("release")
+                } else {
+                    projectdir.join("target/release/")
+                },
                 projectdir,
             },
             Type::Custom => Self {
