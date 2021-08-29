@@ -110,6 +110,44 @@ mandir
 
 Please refer to the [Directory Variables] for their usage.
 
+### Placeholders in configuration
+
+#### Root user configuration
+
+In the configuration you may want to set a value based on another directory set prior. For example
+you may want `bindir` to be a directory `bin` relative to the `exec_prefix` directory. **rinstall**
+supports placeholders in the configuration to allow this:
+
+```
+exec_prefix: /usr/local
+bindir: @exec_prefix@/bin
+```
+
+The root user configuration allows for the following placeholders:
+
+- `@prefix@`, supported by all values
+- `@exec_prefix@`, supported in `bindir` and `libdir`
+- `@localstatedir@`, supported in `runstatedir`
+- `@datarootdir@`, supported in `docdir` and `mandir`
+
+#### Non-root user configuration
+
+Non-root user configuration relies on XDG Directories, so it allows placeholders that refer to
+these values. The placeholders will be replaced by the environment variable and, if it is not set,
+it will fallback on a default value:
+
+```
+datadir: @XDG_DATA_HOME@
+sysconfdir: @XDG_CONFIG_HOME@
+```
+
+The non-root user configuratione supports for the following placeholders:
+
+- `@XDG_DATA_HOME@`, supported in `datarootdir` and `datadir`
+- `@XDG_CONFIG_HOME@`, supported in `sysconfdir`
+- `@XDG_STATE_HOME@`, supported in `localstatedir`
+- `@XDG_RUNTIME_DIR@`, supported in `runstatedir`
+
 ## Writing `install.yml`
 
 To support rinstall, place an `install.yml` file into the root of your project. This file
