@@ -1,6 +1,8 @@
 # rinstall
 
 [![builds.sr.ht status](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml.svg)](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml?)
+![GitHub](https://img.shields.io/github/license/danyspin97/rinstall)
+![Liberapay giving](https://img.shields.io/liberapay/patrons/danyspin97.svg?logo=liberapay)
 
 rinstall is an helper tool that installs software and additional data into the system.
 Many programs often include man pages, documentation, config files and there is no standard
@@ -91,24 +93,28 @@ Additionally, a different configuration file can be passed by using the `--confi
 command line argument. All the values can also be overridden when invoking rinstall by using
 the respective command line arguments.
 
-The configuration is a YAML file that can contains the following keys:
+The configuration is a YAML file that can contain the following keys. If any of them is missing,
+a default value will be used instead.
 
-```
-prefix
-exec_prefix
-bindir
-libdir
-datarootdir
-datadir
-sysconfdir
-localstatedir
-runstatedir
-includedir
-docdir
-mandir
-```
+- `bindir`
+- `libdir`
+- `datarootdir`
+- `datadir`
+- `sysconfdir`
+- `localstatedir`
+- `runstatedir`
+
+In addition, the system-wide configuration can contain the following keys:
+
+- `prefix`
+- `exec_prefix`
+- `includedir`
+- `docdir`
+- `mandir`
 
 Please refer to the [Directory Variables] for their usage.
+
+If any key is missing, 
 
 ### Placeholders in configuration
 
@@ -203,6 +209,11 @@ The type part can either be `rust` or `custom`.
 Use `rust` type when the project is built using `cargo`. By doing so the target directory
 (fetched using `cargo metadata`) will be used as root for executables and libraries.
 I.e. you don't need to use `target/release/myexe` when listing executables, but just `myexe`.
+
+### `custom`
+
+Use `custom` for all the other projects. All the directories will be relative to the root of
+the project.
 
 ### Valid keys
 
@@ -320,11 +331,6 @@ enabled for an entry:
 - `@includedir@`
 - `@docdir@`
 - `@mandir@`
-
-## TODO
-
-- Add `--reversible` (reverse the installation)
-- Add `--exclude` flag
 
 ## License
 
