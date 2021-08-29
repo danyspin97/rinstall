@@ -9,16 +9,24 @@ use xdg::BaseDirectories;
 #[clap(version = "0.1", author = "Danilo Spinella <oss@danyspin97.org>")]
 pub struct Config {
     #[serde(skip_deserializing)]
-    #[clap(short, long)]
+    #[clap(short, long, about = "Path to the rinstall.yml configuration")]
     pub config: Option<String>,
     #[serde(skip_deserializing)]
-    #[clap(long = "system")]
+    #[clap(long = "system", about = "Perform a system-wide installation")]
     pub system: bool,
     #[serde(skip_deserializing)]
-    #[clap(short = 'y', long = "yes")]
+    #[clap(
+        short = 'y',
+        long = "yes",
+        about = "Accept the changes and perform the installation"
+    )]
     pub accept_changes: bool,
     #[serde(skip_deserializing)]
-    #[clap(short = 'p', long)]
+    #[clap(
+        short = 'p',
+        long,
+        about = "Path to the directory containing the project to install"
+    )]
     pub package_dir: Option<String>,
     #[serde(skip_deserializing)]
     #[clap(long)]
