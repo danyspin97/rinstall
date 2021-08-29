@@ -177,6 +177,7 @@ following data:
   should be installed to. It shall always be relative, the corresponding system directory will
   be appended based on the type of entry; e.g. for `exe` entries, the destination part will be
   appended to `bindir`. To mark the destination as a directory, add a leading path separator `/`.
+- `tmpl`: enable templating for the current entry; refer to **templating** for more information.
 
 When the entry is only a string, it shall contains the source and follows the same rules as `src`.
 
@@ -269,6 +270,56 @@ completions:
     - _cat
     - _cp
 ```
+
+### Templating
+
+Sometimes it might be required to refer to some installed file or some location. However,
+these locations are only known when installing, so they can't be hard-coded into
+the file itself. **rinstall** allows to replace some placeholders with the actual directories.
+
+To enable templating for a file, add `tmpl: true` to an entry:
+
+```
+docs:
+  - src: my-doc.md
+    tmpl: true
+```
+
+`my-doc.md` file will contains one of the placeholders specified below and they will be replaced
+automatically by rinstall. For example if it contains the following contents:
+
+```
+This project has used @prefix@ as its prefix and @bindir@ as its bindir.
+```
+
+Then we invoke rinstall like this:
+
+```
+# rinstall -y --prefix /usr --bindir "@prefix@/bin"
+```
+
+The documentation file `my-doc.md` installed will look like the following:
+
+```
+This project has used /usr as its prefix and /usr/bin as its bindir.
+```
+
+#### Allowed placeholders
+
+The following placeholders will be replaced with their respective value when templating is
+enabled for an entry:
+
+- `@prefix@`
+- `@exec_prefix@`
+- `@bindir@`
+- `@datarootdir@`
+- `@datadir@`
+- `@sysconfdir@`
+- `@localstatedir@`
+- `@runstatedir@`
+- `@includedir@`
+- `@docdir@`
+- `@mandir@`
 
 ## TODO
 
