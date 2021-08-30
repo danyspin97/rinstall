@@ -1,4 +1,4 @@
-use std::{path::PathBuf, process::Command};
+use std::{env, os::unix::process::CommandExt, path::PathBuf, process::Command};
 
 use color_eyre::eyre::{Context, Result};
 
@@ -22,23 +22,36 @@ impl Project {
                 // cargo metadata only works when running as the current user that has built
                 // the project. Otherwise it will use metadata for the root user and
                 // it is almost never what we want
-                outputdir: if unsafe { libc::getuid() } != 0 {
-                    PathBuf::from(
+                outputdir: PathBuf::from({
+                    if Command::new("cargo")
+                        .output()
+                        .map_or(false, |output| output.status.success())
+                    {
                         json::parse(&String::from_utf8_lossy(
                             &Command::new("cargo")
                                 .arg("metadata")
+                                .uid(
+                                    env::var("SUDO_UID").map_or(unsafe { libc::getuid() }, |uid| {
+                                        uid.parse::<u32>().unwrap()
+                                    }),
+                                )
+                                .gid(
+                                    env::var("SUDO_GID").map_or(unsafe { libc::getgid() }, |gid| {
+                                        gid.parse::<u32>().unwrap()
+                                    }),
+                                )
                                 .output()
                                 .context("unable to run `cargo metadata`")?
                                 .stdout,
                         ))
                         .context("unable to parse JSON from `cargo metadata` output")?
                             ["target_directory"]
-                            .to_string(),
-                    )
-                    .join("release")
-                } else {
-                    projectdir.join("target/release/")
-                },
+                            .to_string()
+                    } else {
+                        "target".to_string()
+                    }
+                })
+                .join("release"),
                 projectdir,
             },
             Type::Custom => Self {
