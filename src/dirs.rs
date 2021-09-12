@@ -35,7 +35,7 @@ impl Dirs {
             mandir: config.mandir.map(PathBuf::from),
         };
 
-        if config.system {
+        if !config.system {
             dirs.append_home();
         }
         dirs.check_absolute_paths()?;
