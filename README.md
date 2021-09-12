@@ -103,14 +103,18 @@ a default value will be used instead.
 - `sysconfdir`
 - `localstatedir`
 - `runstatedir`
+- `systemd_unitsdir`
 
 In addition, the system-wide configuration can contain the following keys:
 
 - `prefix`
 - `exec_prefix`
+- `sbindir`
+- `libexecdir`
 - `includedir`
 - `docdir`
 - `mandir`
+- `pam-modulesdir`
 
 Please refer to the [Directory Variables] for their usage.
 
@@ -135,6 +139,7 @@ The root user configuration allows for the following placeholders:
 - `@exec_prefix@`, supported in `bindir` and `libdir`
 - `@localstatedir@`, supported in `runstatedir`
 - `@datarootdir@`, supported in `docdir` and `mandir`
+- `@libdir`, supported in `pam_modulesdir` and `systemd_unitsdir`
 
 #### Non-root user configuration
 
@@ -150,9 +155,10 @@ sysconfdir: @XDG_CONFIG_HOME@
 The non-root user configuratione supports for the following placeholders:
 
 - `@XDG_DATA_HOME@`, supported in `datarootdir` and `datadir`
-- `@XDG_CONFIG_HOME@`, supported in `sysconfdir`
+- `@XDG_CONFIG_HOME@`, supported in `sysconfdir` and `systemd_unitsdir`
 - `@XDG_STATE_HOME@`, supported in `localstatedir`
 - `@XDG_RUNTIME_DIR@`, supported in `runstatedir`
+- `@sysconfdir@`, supported in `systemd_unitsdir`
 
 ## Writing `install.yml`
 
@@ -224,40 +230,58 @@ the project.
 For the executables; they will be installed in `bindir` (which defaults to
 `/usr/local/bin`)
 
+#### `admin_exe`
+
+_Only available in system-wide installation._
+
+For admin executables; they will be installed in `sbindir` (which defaults to `/usr/local/sbin`).
+
 #### `libs`
 
-For the libraries; they will be installed in `libdir` (which defaults to `/usr/local/lib`)
+For the libraries; they will be installed in `libdir` (which defaults to `/usr/local/lib`).
+
+#### `libexec`
+
+_Only available in system-wide installation._
+
+`libexec` files will be installed in `libexecdir` (which defaults to `/usr/local/libexec`).
 
 #### `man`
 
+_Only available in system-wide installation._
+
 For the man pages; they will be installed under the correct folder in `mandir`
-(which defaults to `/usr/local/share/man`)
+(which defaults to `/usr/local/share/man`).
 
 #### `data`
 
 For architecture independent files; they will be installed in `datarootdir` (which
-defaults to `/usr/local/share`)
+defaults to `/usr/local/share`).
 
 #### `docs`
 
 For documentation and examples; they will be installed in folder
 `doc/<pkg-name>-<pkg-version>` under folder `datarootdir` (which defaults to
-`/usr/local/share/doc/<pkg-name>-<pkg-version>`)
+`/usr/local/share/doc/<pkg-name>-<pkg-version>`).
 
 #### `config`
 
 For configuration files; they will be installed in `sysconfdir` (which defaults to
-`/usr/local/etc`)
+`/usr/local/etc`).
 
 #### `desktop-files`
 
 For `.desktop` files; they will be installed in folder
-`applications` under `datarootdir` (which defaults to `/usr/local/share/applications`)
+`applications` under `datarootdir` (which defaults to `/usr/local/share/applications`).
 
-#### `appdata`
+#### `appstream-metadata`
 
-For appdata files; they will be installed in folder
-`appdata` under `datarootdir` (which defaults to `/usr/local/share/appdata`)
+_Only available in system-wide installation._
+
+For [AppStream metadata] files; they will be installed in folder
+`metainfo` under `datarootdir` (which defaults to `/usr/local/share/metainfo`).
+
+[AppStream metadata]: https://www.freedesktop.org/software/appstream/docs/chap-Metadata.html
 
 #### `completions`
 
@@ -281,6 +305,18 @@ completions:
     - _cat
     - _cp
 ```
+
+#### `pam_modulesdir`
+
+_Only available in system-wide installation._
+
+For PAM modules; they will be installed in `@libdir@/security` (`/usr/local/lib/security`
+by default). If only `src` is provided, and the name of the file starts with `lib`, e.g.
+`libpam_mymodule.so`, it will be automatically converted to `pam_mymodule.so`.
+
+#### `systemd_units`
+
+For systemd units; they will be installed in `@libdir@/systemd/system` (`/usr/local/lib/systemd/system` by default).
 
 ### Templating
 

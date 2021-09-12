@@ -5,3 +5,4 @@ datadir: @XDG_DATA_HOME@/share
 sysconfdir: @XDG_CONFIG_HOME@
 localstatedir: @XDG_STATE_HOME@
 runstatedir: @XDG_RUNTIME_DIR@
+systemd_unitsdir: @XDG_CONFIG_HOME@/systemd/user

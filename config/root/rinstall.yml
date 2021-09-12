@@ -1,7 +1,9 @@
 prefix: /usr/local
 exec_prefix: @prefix@
 bindir: @exec_prefix@/bin
+sbindir: @exec_prefix@/sbin
 libdir: @exec_prefix@/lib
+libexecdir: @exec_prefix@/libexec
 datarootdir: @prefix@/share
 datadir: @prefix@/share
 sysconfdir: @prefix@/etc
@@ -10,3 +12,5 @@ runstatedir: @localstatedir@/run
 includedir: @prefix@/include
 docdir: @datarootdir@/doc
 mandir: @datarootdir@/man
+pam_modulesdir: @libdir@/security
+systemd_unitsdir: @libdir@/systemd/system

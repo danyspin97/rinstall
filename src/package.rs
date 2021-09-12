@@ -40,8 +40,12 @@ pub struct Package {
     pub project_type: Type,
     #[serde(default)]
     exe: Vec<Entry>,
+    #[serde(default, rename(deserialize = "admin-exe"))]
+    admin_exe: Vec<Entry>,
     #[serde(default)]
     libs: Vec<Entry>,
+    #[serde(default)]
+    libexec: Vec<Entry>,
     #[serde(default)]
     man: Vec<Entry>,
     #[serde(default)]
@@ -52,10 +56,14 @@ pub struct Package {
     config: Vec<Entry>,
     #[serde(default, rename(deserialize = "desktop-files"))]
     desktop_files: Vec<Entry>,
-    #[serde(default)]
-    appdata: Vec<Entry>,
+    #[serde(default, rename(deserialize = "appstream-metadata"))]
+    appstream_metadata: Vec<Entry>,
     #[serde(default)]
     completions: Completions,
+    #[serde(default, rename(deserialize = "pam-modules"))]
+    pam_modules: Vec<Entry>,
+    #[serde(default, rename(deserialize = "systemd-units"))]
+    systemd_units: Vec<Entry>,
 }
 
 macro_rules! entry {
@@ -87,11 +95,25 @@ impl Package {
         }
 
         results.extend(install_files!(exe, &dirs.bindir, &project.outputdir, "exe"));
+        if let Some(sbindir) = &dirs.sbindir {
+            results.extend(install_files!(
+                admin_exe,
+                sbindir,
+                &project.outputdir,
+                "admin_exe"
+            ));
+        }
         results.extend(install_files!(
             libs,
             &dirs.libdir,
             &project.outputdir,
             "libs"
+        ));
+        results.extend(install_files!(
+            libexec,
+            &dirs.libexecdir,
+            &project.outputdir,
+            "libexec"
         ));
         results.extend(install_files!(
             data,
@@ -127,10 +149,10 @@ impl Package {
         ));
 
         results.extend(install_files!(
-            appdata,
-            &dirs.datarootdir.join("appdata"),
+            appstream_metadata,
+            &dirs.datarootdir.join("metainfo"),
             &project.projectdir,
-            "appdata"
+            "appstream_metadata"
         ));
 
         results.extend(
@@ -160,6 +182,58 @@ impl Package {
                 .collect::<Result<Vec<InstallTarget>>>()
                 .context("error while iterating completion files")?,
         );
+
+        if let Some(pam_modulesdir) = &dirs.pam_modulesdir {
+            results.extend(
+                self.pam_modules
+                    .into_iter()
+                    .map(|entry| {
+                        let InstallEntry {
+                            source,
+                            destination,
+                            templating,
+                        } = match entry {
+                            Entry::InstallEntry(entry) => entry,
+                        };
+
+                        let destination = if destination.is_some() {
+                            destination
+                        } else {
+                            let file_name = source
+                                .file_name()
+                                .with_context(|| {
+                                    format!("unable to get file name of file {:?}", source)
+                                })?
+                                .to_str()
+                                .unwrap();
+                            if file_name.starts_with("libpam_") {
+                                Some(PathBuf::from(file_name.strip_prefix("lib").unwrap()))
+                            } else {
+                                None
+                            }
+                        };
+
+                        InstallTarget::new(
+                            InstallEntry {
+                                source,
+                                destination,
+                                templating,
+                            },
+                            pam_modulesdir,
+                            &project.outputdir,
+                        )
+                    })
+                    .collect::<Result<Vec<InstallTarget>>>()
+                    .context("error while iterating pam-modules")?,
+            );
+        }
+
+        results.extend(install_files!(
+            systemd_units,
+            &dirs.systemd_unitsdir,
+            &project.projectdir,
+            "systemd_units"
+        ));
 
         Ok(results)
     }

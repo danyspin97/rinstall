@@ -38,7 +38,11 @@ pub struct Config {
     #[clap(long)]
     pub bindir: Option<String>,
     #[clap(long)]
+    pub sbindir: Option<String>,
+    #[clap(long)]
     pub libdir: Option<String>,
+    #[clap(long)]
+    pub libexecdir: Option<String>,
     #[clap(long)]
     pub datarootdir: Option<String>,
     #[clap(long)]
@@ -55,6 +59,10 @@ pub struct Config {
     pub docdir: Option<String>,
     #[clap(long)]
     pub mandir: Option<String>,
+    #[clap(long)]
+    pub pam_modulesdir: Option<String>,
+    #[clap(long)]
+    pub systemd_unitsdir: Option<String>,
 }
 
 impl Config {
@@ -68,7 +76,9 @@ impl Config {
             prefix: Some("/usr/local".to_string()),
             exec_prefix: Some("@prefix@".to_string()),
             bindir: Some("@exec_prefix@/bin".to_string()),
+            sbindir: Some("@exec_prefix@/sbin".to_string()),
             libdir: Some("@exec_prefix@/lib".to_string()),
+            libexecdir: Some("@exec_prefix@/libexec".to_string()),
             datarootdir: Some("@prefix@/share".to_string()),
             datadir: Some("@prefix@/share".to_string()),
             sysconfdir: Some("@prefix@/etc".to_string()),
@@ -77,6 +87,8 @@ impl Config {
             includedir: Some("@prefix@/include".to_string()),
             docdir: Some("@datarootdir@/doc".to_string()),
             mandir: Some("@datarootdir@/man".to_string()),
+            pam_modulesdir: Some("@libdir@/security".to_string()),
+            systemd_unitsdir: Some("@libdir@/systemd/system".to_string()),
         }
     }
 
@@ -90,7 +102,9 @@ impl Config {
             prefix: None,
             exec_prefix: None,
             bindir: Some(".local/bin".to_string()),
+            sbindir: None,
             libdir: Some(".local/lib".to_string()),
+            libexecdir: Some(".local/libexec".to_string()),
             datarootdir: Some("@XDG_DATA_HOME@".to_string()),
             datadir: Some("@XDG_DATA_HOME@".to_string()),
             sysconfdir: Some("@XDG_CONFIG_HOME@".to_string()),
@@ -99,6 +113,8 @@ impl Config {
             includedir: None,
             docdir: None,
             mandir: None,
+            pam_modulesdir: None,
+            systemd_unitsdir: Some("@sysconfdir@/systemd/user".to_string()),
         }
     }
 
@@ -120,7 +136,9 @@ impl Config {
             prefix,
             exec_prefix,
             bindir,
+            sbindir,
             libdir,
+            libexecdir,
             datarootdir,
             datadir,
             sysconfdir,
@@ -128,7 +146,9 @@ impl Config {
             runstatedir,
             includedir,
             docdir,
-            mandir
+            mandir,
+            pam_modulesdir,
+            systemd_unitsdir
         );
     }
 
@@ -149,11 +169,13 @@ impl Config {
         update_fields!(
             bindir,
             libdir,
+            libexecdir,
             datarootdir,
             datadir,
             sysconfdir,
             localstatedir,
-            runstatedir
+            runstatedir,
+            systemd_unitsdir
         );
     }
 
@@ -184,6 +206,7 @@ impl Config {
             .place_runtime_file(".")
             .context("unable to get runtime directory")?;
         replace!(runstatedir, "@XDG_RUNTIME_DIR@", runtime_dir);
+        replace!(systemd_unitsdir, "@XDG_CONFIG_HOME@", xdg.get_config_home());
 
         Ok(())
     }
@@ -205,7 +228,9 @@ impl Config {
             "@prefix@",
             exec_prefix,
             bindir,
+            sbindir,
             libdir,
+            libexecdir,
             datadir,
             datarootdir,
             sysconfdir,
@@ -213,11 +238,21 @@ impl Config {
             runstatedir,
             includedir,
             docdir,
-            mandir
+            mandir,
+            pam_modulesdir,
+            systemd_unitsdir
         );
 
-        replace!(exec_prefix, "@exec_prefix@", bindir, libdir);
+        replace!(
+            exec_prefix,
+            "@exec_prefix@",
+            bindir,
+            sbindir,
+            libdir,
+            libexecdir
+        );
         replace!(localstatedir, "@localstatedir@", runstatedir);
         replace!(datarootdir, "@datarootdir@", docdir, mandir);
+        replace!(libdir, "@libdir@", pam_modulesdir, systemd_unitsdir);
     }
 }

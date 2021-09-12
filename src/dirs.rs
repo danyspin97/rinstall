@@ -11,7 +11,9 @@ pub struct Dirs {
     pub prefix: Option<PathBuf>,
     pub exec_prefix: Option<PathBuf>,
     pub bindir: PathBuf,
+    pub sbindir: Option<PathBuf>,
     pub libdir: PathBuf,
+    pub libexecdir: PathBuf,
     pub datarootdir: PathBuf,
     pub datadir: PathBuf,
     pub sysconfdir: PathBuf,
@@ -20,6 +22,8 @@ pub struct Dirs {
     pub includedir: Option<PathBuf>,
     pub docdir: Option<PathBuf>,
     pub mandir: Option<PathBuf>,
+    pub pam_modulesdir: Option<PathBuf>,
+    pub systemd_unitsdir: PathBuf,
 }
 
 impl Dirs {
@@ -28,7 +32,9 @@ impl Dirs {
             prefix: config.prefix.map(PathBuf::from),
             exec_prefix: config.exec_prefix.map(PathBuf::from),
             bindir: PathBuf::from(config.bindir.unwrap()),
+            sbindir: config.sbindir.map(PathBuf::from),
             libdir: PathBuf::from(config.libdir.unwrap()),
+            libexecdir: PathBuf::from(config.libexecdir.unwrap()),
             datarootdir: PathBuf::from(config.datarootdir.unwrap()),
             datadir: PathBuf::from(config.datadir.unwrap()),
             sysconfdir: PathBuf::from(config.sysconfdir.unwrap()),
@@ -37,6 +43,8 @@ impl Dirs {
             includedir: config.includedir.map(PathBuf::from),
             docdir: config.docdir.map(PathBuf::from),
             mandir: config.mandir.map(PathBuf::from),
+            pam_modulesdir: config.pam_modulesdir.map(PathBuf::from),
+            systemd_unitsdir: PathBuf::from(config.systemd_unitsdir.unwrap()),
         };
 
         if !config.system {
@@ -61,6 +69,7 @@ impl Dirs {
         append_home_to!(
             bindir,
             libdir,
+            libexecdir,
             datarootdir,
             datadir,
             sysconfdir,
