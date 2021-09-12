@@ -193,7 +193,16 @@ fn main() -> Result<()> {
                         })?;
                         let source = source.join(relative_path);
                         let destination = destination.join(relative_path);
-                        println!("Installing {:?} to {:?}", source, destination);
+                        println!(
+                            "{} {:?} -> {:?}",
+                            if dry_run {
+                                "Would install:"
+                            } else {
+                                "Installing"
+                            },
+                            source.strip_prefix(&package_dir).unwrap_or(&source),
+                            destination
+                        );
                         if dry_run {
                             return Ok(());
                         }
