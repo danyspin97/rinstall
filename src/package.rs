@@ -188,13 +188,11 @@ impl Package {
                 self.pam_modules
                     .into_iter()
                     .map(|entry| {
-                        let InstallEntry {
+                        let Entry::InstallEntry(InstallEntry {
                             source,
                             destination,
                             templating,
-                        } = match entry {
-                            Entry::InstallEntry(entry) => entry,
-                        };
+                        }) = entry;
 
                         let destination = if destination.is_some() {
                             destination
