@@ -1,5 +1,9 @@
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
+
 use color_eyre::eyre::Result;
-use std::path::PathBuf;
 
 use crate::Config;
 
@@ -48,7 +52,7 @@ impl Dirs {
             ( $($var:ident),* ) => {
                 $(
                     if self.$var.is_relative() {
-                        self.$var = PathBuf::from(std::env::var("HOME").unwrap()).join(&self.$var);
+                        self.$var = Path::new(&env::var("HOME").unwrap()).join(&self.$var);
                     }
                 )*
             };
