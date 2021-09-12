@@ -1,7 +1,7 @@
-use color_eyre::eyre::{Context, Result};
+use color_eyre::eyre::{Context, ContextCompat, Result};
 use serde::Deserialize;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::install_entry::{string_or_struct, InstallEntry};
 use crate::install_target::InstallTarget;
@@ -80,6 +80,7 @@ impl Package {
         dirs: &Dirs,
         project: Project,
     ) -> Result<Vec<InstallTarget>> {
+        let package_name = self.name.to_owned();
         let mut results = Vec::new();
 
         macro_rules! install_files {
@@ -117,7 +118,7 @@ impl Package {
         ));
         results.extend(install_files!(
             data,
-            &dirs.datadir,
+            &dirs.datadir.join(&package_name),
             &project.projectdir,
             "data"
         ));
@@ -131,11 +132,10 @@ impl Package {
             results.extend(install_files!(man, mandir, &project.projectdir, "man"));
         }
 
-        let package_doc_dir = self.name.to_owned();
         if let Some(docdir) = &dirs.docdir {
             results.extend(install_files!(
                 docs,
-                &docdir.join(Path::new(&package_doc_dir)),
+                &docdir.join(Path::new(&package_name)),
                 &project.projectdir,
                 "docs"
             ));
