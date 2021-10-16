@@ -207,6 +207,7 @@ impl Config {
             .context("unable to get runtime directory")?;
         replace!(runstatedir, "@XDG_RUNTIME_DIR@", runtime_dir);
         replace!(systemd_unitsdir, "@XDG_CONFIG_HOME@", xdg.get_config_home());
+        replace!(systemd_unitsdir, "@sysconfdir@", xdg.get_config_home());
 
         Ok(())
     }
