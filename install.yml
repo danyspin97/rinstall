@@ -1,5 +1,5 @@
+rinstall: 0.1.0
 name: rinstall
-version: 0.1
 type: rust
 exe:
   - rinstall
