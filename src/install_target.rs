@@ -214,6 +214,8 @@ fn apply_templating_to(
     replace_when_some!(includedir, "@includedir@");
     replace_when_some!(docdir, "@docdir@");
     replace_when_some!(mandir, "@mandir@");
+    replace_when_some!(pam_modulesdir, "@pam_moduledirs@");
+    replace!(systemd_unitsdir, "@systemd_unitsdir@");
 
     Ok(s)
 }

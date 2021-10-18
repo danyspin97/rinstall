@@ -396,6 +396,8 @@ enabled for an entry:
 - `@includedir@`
 - `@docdir@`
 - `@mandir@`
+- `@pam_modulesdir@`
+- `@systemd_unitsdir@`
 
 ## License
 
