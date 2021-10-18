@@ -162,22 +162,24 @@ The non-root user configuratione supports for the following placeholders:
 
 ## Writing `install.yml`
 
-To support rinstall, place an `install.yml` file into the root of your project. This file
-shall contains at least the name and the version of the program to install and its type. Then it
-allows a list of entries differentiated by their type.
+To support **rinstall**, place an `install.yml` file into the root of your project. It shall contain
+the rinstall version to use and the packages to install. Each package shall contain the
+entries of the files to install, divided by their purpose/destination.
 
-Example file:
+Example file for a program named `foo` that only install an executable with the same name:
 
 ```yaml
-name: rinstall
-version: 0.1
-type: rust
-exe:
-  - rinstall
-docs:
-  - LICENSE.md
-  - README.md
+rinstall: 0.1.0
+foo:
+  exe:
+    - foo
 ```
+
+### rinstall version
+
+each rinstall release will have a respective version of the spec file; each version might support
+new entry types but it might remove support for some as well. rinstall will support older
+releases, along with all its entry types which were allowed.
 
 ### Entries
 Each entry list a file to install and it shall either be a string or a struct containing the
@@ -206,31 +208,34 @@ src: myprog
 dst: internaldir/
 ```
 
-### Type
-
-The type part can either be `rust` or `custom`.
-
-#### `rust`
-
-Use `rust` type when the project is built using `cargo`. By doing so the target directory
-(fetched using `cargo metadata`) will be used as root for executables and libraries.
-I.e. you don't need to use `target/release/myexe` when listing executables, but just `myexe`.
-
-### `custom`
-
-Use `custom` for all the other projects. All the directories will be relative to the root of
-the project.
-
-### Valid keys
+### Valid entries
 
 **rinstall** allows for the following keys:
 
+#### Type
+
+(_since 0.1.0_)
+
+The type part can either be `rust` or `custom`. If no value is specified, then `custom` will be
+used.
+
+- `rust` for projects built using `cargo`. The target directory is fetched using `cargo metadata`
+  and used as root directory for executables and libraries. I.e. you don't need to use
+  `target/release/myexe` when listing executables, but just `myexe`.
+
+- `custom` for all the other projects. All the directories will be relative to the root directory
+  of the project.
+
 #### `exe`
+
+(_since 0.1.0_)
 
 For the executables; they will be installed in `bindir` (which defaults to
 `/usr/local/bin`)
 
 #### `admin_exe`
+
+(_since 0.1.0_)
 
 _Only available in system-wide installation._
 
@@ -238,15 +243,21 @@ For admin executables; they will be installed in `sbindir` (which defaults to `/
 
 #### `libs`
 
+(_since 0.1.0_)
+
 For the libraries; they will be installed in `libdir` (which defaults to `/usr/local/lib`).
 
 #### `libexec`
+
+(_since 0.1.0_)
 
 _Only available in system-wide installation._
 
 `libexec` files will be installed in `libexecdir` (which defaults to `/usr/local/libexec`).
 
 #### `man`
+
+(_since 0.1.0_)
 
 _Only available in system-wide installation._
 
@@ -255,26 +266,36 @@ For the man pages; they will be installed under the correct folder in `mandir`
 
 #### `data`
 
+(_since 0.1.0_)
+
 For architecture independent files; they will be installed in `datarootdir` (which
 defaults to `/usr/local/share`).
 
 #### `docs`
 
+(_since 0.1.0_)
+
 For documentation and examples; they will be installed in folder
-`doc/<pkg-name>-<pkg-version>` under folder `datarootdir` (which defaults to
-`/usr/local/share/doc/<pkg-name>-<pkg-version>`).
+`doc/<pkg-name>` under folder `datarootdir` (which defaults to
+`/usr/local/share/doc/<pkg-name>`).
 
 #### `config`
+
+(_since 0.1.0_)
 
 For configuration files; they will be installed in `sysconfdir` (which defaults to
 `/usr/local/etc`).
 
 #### `desktop-files`
 
+(_since 0.1.0_)
+
 For `.desktop` files; they will be installed in folder
 `applications` under `datarootdir` (which defaults to `/usr/local/share/applications`).
 
 #### `appstream-metadata`
+
+(_since 0.1.0_)
 
 _Only available in system-wide installation._
 
@@ -284,6 +305,10 @@ For [AppStream metadata] files; they will be installed in folder
 [AppStream metadata]: https://www.freedesktop.org/software/appstream/docs/chap-Metadata.html
 
 #### `completions`
+
+- *bash* (_since 0.1.0_)
+- *fish* (_since 0.1.0_)
+- *zsh* (_since 0.1.0_)
 
 For completions files; they will be installed in the respective shell completions
 directory, under `datarootdir`:
@@ -308,6 +333,8 @@ completions:
 
 #### `pam_modulesdir`
 
+(_since 0.1.0_)
+
 _Only available in system-wide installation._
 
 For PAM modules; they will be installed in `@libdir@/security` (`/usr/local/lib/security`
@@ -315,6 +342,8 @@ by default). If only `src` is provided, and the name of the file starts with `li
 `libpam_mymodule.so`, it will be automatically converted to `pam_mymodule.so`.
 
 #### `systemd_units`
+
+(_since 0.1.0_)
 
 For systemd units; they will be installed in `@libdir@/systemd/system` (`/usr/local/lib/systemd/system` by default).
 

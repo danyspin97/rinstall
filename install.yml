@@ -1,8 +1,9 @@
 rinstall: 0.1.0
-name: rinstall
-type: rust
-exe:
-  - rinstall
-docs:
-  - LICENSE.md
-  - README.md
+pkgs:
+  rinstall:
+    type: rust
+    exe:
+      - rinstall
+    docs:
+      - LICENSE.md
+      - README.md

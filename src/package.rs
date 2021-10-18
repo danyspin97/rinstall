@@ -36,9 +36,7 @@ struct Completions {
 
 #[derive(Deserialize)]
 pub struct Package {
-    #[serde(rename(deserialize = "rinstall"))]
-    rinstall_version: Version,
-    name: String,
+    pub name: Option<String>,
     #[serde(rename(deserialize = "type"))]
     pub project_type: Type,
     #[serde(default)]
@@ -88,17 +86,16 @@ impl Package {
         self,
         dirs: &Dirs,
         project: Project,
+        rinstall_version: &Version,
     ) -> Result<Vec<InstallTarget>> {
         let allowed_version = vec!["0.1.0"];
         allowed_version
             .iter()
             .map(|v| Version::parse(v).unwrap())
-            .find(|v| v == &self.rinstall_version)
-            .with_context(|| {
-                format!("{} is not a valid rinstall version", self.rinstall_version)
-            })?;
+            .find(|v| v == rinstall_version)
+            .with_context(|| format!("{} is not a valid rinstall version", rinstall_version))?;
 
-        let package_name = self.name.to_owned();
+        let package_name = self.name.unwrap().to_owned();
         let mut results = Vec::new();
 
         macro_rules! install_files {
@@ -113,10 +110,9 @@ impl Package {
             };
         }
 
-        let version = self.rinstall_version;
         results.extend(install_files!(exe, &dirs.bindir, &project.outputdir, "exe"));
         if let Some(sbindir) = &dirs.sbindir {
-            check_version!(version, ">=0.1.0");
+            check_version!(rinstall_version, ">=0.1.0");
             results.extend(install_files!(
                 admin_exe,
                 sbindir,
@@ -149,12 +145,12 @@ impl Package {
             "config"
         ));
         if let Some(mandir) = &dirs.mandir {
-            check_version!(version, ">=0.1.0");
+            check_version!(rinstall_version, ">=0.1.0");
             results.extend(install_files!(man, mandir, &project.projectdir, "man"));
         }
 
         if let Some(docdir) = &dirs.docdir {
-            check_version!(version, ">=0.1.0");
+            check_version!(rinstall_version, ">=0.1.0");
             results.extend(install_files!(
                 docs,
                 &docdir.join(Path::new(&package_name)),
@@ -206,7 +202,7 @@ impl Package {
         );
 
         if let Some(pam_modulesdir) = &dirs.pam_modulesdir {
-            check_version!(version, ">=0.1.0");
+            check_version!(rinstall_version, ">=0.1.0");
             results.extend(
                 self.pam_modules
                     .into_iter()

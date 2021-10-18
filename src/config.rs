@@ -23,13 +23,20 @@ pub struct Config {
     pub accept_changes: bool,
     #[serde(skip_deserializing)]
     #[clap(
-        short = 'p',
+        short = 'P',
         long,
         about = "Path to the directory containing the project to install"
     )]
     pub package_dir: Option<String>,
+    #[serde(skip_deserializing, default)]
+    #[clap(
+        short = 'p',
+        long = "pkgs",
+        about = "List of packages to install, separated by a comma"
+    )]
+    pub packages: Vec<String>,
     #[serde(skip_deserializing)]
-    #[clap(long)]
+    #[clap(short = 'D', long)]
     pub destdir: Option<String>,
     #[clap(long)]
     pub prefix: Option<String>,
@@ -72,6 +79,7 @@ impl Config {
             system: true,
             accept_changes: false,
             package_dir: None,
+            packages: Vec::new(),
             destdir: None,
             prefix: Some("/usr/local".to_string()),
             exec_prefix: Some("@prefix@".to_string()),
@@ -98,6 +106,7 @@ impl Config {
             system: false,
             accept_changes: false,
             package_dir: None,
+            packages: Vec::new(),
             destdir: None,
             prefix: None,
             exec_prefix: None,
