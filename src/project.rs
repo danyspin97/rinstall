@@ -23,47 +23,44 @@ impl Project {
                 projectdir.clone()
             } else {
                 match project_type {
-                    Type::Rust => {
-                        // cargo metadata only works when running as the current user that has built
-                        // the project. Otherwise it will use metadata for the root user and
-                        // it is almost never what we want
-                        PathBuf::from({
-                            if Command::new("cargo")
-                                .output()
-                                .map_or(false, |output| output.status.success())
-                            {
-                                json::parse(&String::from_utf8_lossy(
-                                    &Command::new("cargo")
-                                        .arg("metadata")
-                                        .uid(
-                                            env::var("SUDO_UID")
-                                                .map_or(unsafe { libc::getuid() }, |uid| {
-                                                    uid.parse::<u32>().unwrap()
-                                                }),
-                                        )
-                                        .gid(
-                                            env::var("SUDO_GID")
-                                                .map_or(unsafe { libc::getgid() }, |gid| {
-                                                    gid.parse::<u32>().unwrap()
-                                                }),
-                                        )
-                                        .output()
-                                        .context("unable to run `cargo metadata`")?
-                                        .stdout,
-                                ))
-                                .context("unable to parse JSON from `cargo metadata` output")?
-                                    ["target_directory"]
-                                    .to_string()
-                            } else {
-                                "target".to_string()
-                            }
-                        })
-                        .join("release")
-                    }
+                    Type::Rust => get_target_dir_for_rust()?,
                     Type::Custom => projectdir.clone(),
                 }
             },
             projectdir,
         })
     }
+}
+
+fn get_target_dir_for_rust() -> Result<PathBuf> {
+    // cargo metadata only works when running as the current user that has built
+    // the project. Otherwise it will use metadata for the root user and
+    // it is almost never what we want
+    Ok(PathBuf::from({
+        if Command::new("cargo")
+            .output()
+            .map_or(false, |output| output.status.success())
+        {
+            json::parse(&String::from_utf8_lossy(
+                &Command::new("cargo")
+                    .arg("metadata")
+                    .uid(
+                        env::var("SUDO_UID")
+                            .map_or(unsafe { libc::getuid() }, |uid| uid.parse::<u32>().unwrap()),
+                    )
+                    .gid(
+                        env::var("SUDO_GID")
+                            .map_or(unsafe { libc::getgid() }, |gid| gid.parse::<u32>().unwrap()),
+                    )
+                    .output()
+                    .context("unable to run `cargo metadata`")?
+                    .stdout,
+            ))
+            .context("unable to parse JSON from `cargo metadata` output")?["target_directory"]
+                .to_string()
+        } else {
+            "target".to_string()
+        }
+    })
+    .join("release"))
 }
