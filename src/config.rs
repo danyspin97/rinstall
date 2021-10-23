@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use clap::Clap;
+use clap::Parser;
 use color_eyre::eyre::{Context, ContextCompat, Result};
 use serde::Deserialize;
 use xdg::BaseDirectories;
 
-#[derive(Clap, Deserialize)]
+#[derive(Parser, Deserialize)]
 #[clap(version = "0.1", author = "Danilo Spinella <oss@danyspin97.org>")]
 pub struct Config {
     #[serde(skip_deserializing)]

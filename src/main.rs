@@ -8,7 +8,7 @@ mod project;
 
 use std::{env, fs, path::PathBuf};
 
-use clap::Clap;
+use clap::Parser;
 use color_eyre::eyre::{bail, ensure, Context, Result};
 use xdg::BaseDirectories;
 
