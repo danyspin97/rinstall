@@ -115,6 +115,10 @@ fn main() -> Result<()> {
         })
         .collect::<Vec<Package>>();
 
+    // Check if the projcetdir is a release tarball instead of the
+    // directory containing the source code
+    let is_release_tarball = package_dir.join(".tarball").exists();
+
     for package in packages {
         println!(">>> Package {}", package.name.as_ref().unwrap());
 
@@ -122,7 +126,7 @@ fn main() -> Result<()> {
 
         for target in package.targets(
             &dirs,
-            Project::new_from_type(project_type, package_dir.clone())?,
+            Project::new_from_type(project_type, package_dir.clone(), is_release_tarball)?,
             &install_spec.version,
         )? {
             target.install(destdir.as_deref(), dry_run, &package_dir, &dirs)?;

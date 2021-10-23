@@ -399,6 +399,17 @@ enabled for an entry:
 - `@pam_modulesdir@`
 - `@systemd_unitsdir@`
 
+### Release tarballs
+
+**rinstall** supports installing from release tarballs (i.e. the tarballs published on Github
+for each release containing a compiled version of the program).
+
+To allow a program to be installed from a release tarball create a `.tarball` empty file during
+the generation and include `install.yml`. **rinstall** will then assume that all the files are in
+the top directory and proceed to install them as usual; this means that for _Rust_ programs, the
+executables will be searched in the top directory instead of `target/release`. Please assure that
+all the files listed in `install.yml` are included in the tarball.
+
 ## License
 
 **rinstall** is licensed under the GPL-3+ license.
