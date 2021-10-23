@@ -1,4 +1,9 @@
-use std::{env, os::unix::process::CommandExt, path::PathBuf, process::Command};
+use std::{
+    env,
+    os::unix::process::CommandExt,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use color_eyre::eyre::{Context, Result};
 
@@ -33,11 +38,12 @@ impl Project {
 }
 
 fn get_target_dir_for_rust() -> Result<PathBuf> {
-    // cargo metadata only works when running as the current user that has built
-    // the project. Otherwise it will use metadata for the root user and
-    // it is almost never what we want
     Ok(PathBuf::from({
-        if Command::new("cargo")
+        // if target directory does not exists, try reading the "target_directory"
+        // from cargo metadata
+        if Path::new("target").exists() {
+            "target".to_string()
+        } else if Command::new("cargo")
             .output()
             .map_or(false, |output| output.status.success())
         {
@@ -45,6 +51,9 @@ fn get_target_dir_for_rust() -> Result<PathBuf> {
                 &Command::new("cargo")
                     .arg("metadata")
                     .uid(
+                        // cargo metadata only works when running as the current user that has built
+                        // the project. Otherwise it will use metadata for the root user and
+                        // it is almost never what we want
                         env::var("SUDO_UID")
                             .map_or(unsafe { libc::getuid() }, |uid| uid.parse::<u32>().unwrap()),
                     )
