@@ -106,7 +106,7 @@ fn main() -> Result<()> {
         .packages
         .into_iter()
         .filter(|(name, _)| {
-            pkgs_to_install.is_empty() || pkgs_to_install.iter().find(|pkg| pkg == &name).is_some()
+            pkgs_to_install.is_empty() || pkgs_to_install.iter().any(|pkg| pkg == name)
         })
         .map(|(name, package)| {
             let mut package = package;

@@ -108,7 +108,7 @@ impl InstallTarget {
                             .with_context(|| format!("unable to create file {:?}", destination))?,
                     )
                     .write(
-                        apply_templating_to(contents, &dirs)
+                        apply_templating_to(contents, dirs)
                             .with_context(|| format!("unable to apply templating to {:?}", source))?
                             .as_bytes(),
                     )

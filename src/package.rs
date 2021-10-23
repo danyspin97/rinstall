@@ -95,7 +95,7 @@ impl Package {
             .find(|v| v == rinstall_version)
             .with_context(|| format!("{} is not a valid rinstall version", rinstall_version))?;
 
-        let package_name = self.name.unwrap().to_owned();
+        let package_name = self.name.unwrap();
         let mut results = Vec::new();
 
         macro_rules! install_files {
