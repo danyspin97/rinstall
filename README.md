@@ -410,6 +410,17 @@ the top directory and proceed to install them as usual; this means that for _Rus
 executables will be searched in the top directory instead of `target/release`. Please assure that
 all the files listed in `install.yml` are included in the tarball.
 
+### Uninstall
+
+When a package gets been installed, a `.pkg` will be installed inside `localstatedir/rinstall`.
+This file will contain the list of files so that when running the `uninstall` subcommand,
+rinstall can revert the installation of a package:
+
+```bash
+$ rinstall uninstall foo
+Would remove "/usr/bin/foo"
+```
+
 ## License
 
 **rinstall** is licensed under the GPL-3+ license.

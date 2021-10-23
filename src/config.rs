@@ -5,6 +5,8 @@ use color_eyre::eyre::{Context, ContextCompat, Result};
 use serde::Deserialize;
 use xdg::BaseDirectories;
 
+use crate::uninstall::Uninstall;
+
 #[derive(Parser, Deserialize)]
 #[clap(version = "0.1", author = "Danilo Spinella <oss@danyspin97.org>")]
 pub struct Config {
@@ -35,6 +37,9 @@ pub struct Config {
         about = "List of packages to install, separated by a comma"
     )]
     pub packages: Vec<String>,
+    #[serde(skip_deserializing)]
+    #[clap(long = "disable-uninstall")]
+    pub disable_uninstall: bool,
     #[serde(skip_deserializing)]
     #[clap(short = 'D', long)]
     pub destdir: Option<String>,
@@ -70,6 +75,14 @@ pub struct Config {
     pub pam_modulesdir: Option<String>,
     #[clap(long)]
     pub systemd_unitsdir: Option<String>,
+    #[serde(skip_deserializing)]
+    #[clap(subcommand)]
+    pub subcmd: Option<SubCommand>,
+}
+
+#[derive(Parser, Clone)]
+pub enum SubCommand {
+    Uninstall(Uninstall),
 }
 
 impl Config {
@@ -80,6 +93,7 @@ impl Config {
             accept_changes: false,
             package_dir: None,
             packages: Vec::new(),
+            disable_uninstall: false,
             destdir: None,
             prefix: Some("/usr/local".to_string()),
             exec_prefix: Some("@prefix@".to_string()),
@@ -97,6 +111,7 @@ impl Config {
             mandir: Some("@datarootdir@/man".to_string()),
             pam_modulesdir: Some("@libdir@/security".to_string()),
             systemd_unitsdir: Some("@libdir@/systemd/system".to_string()),
+            subcmd: None,
         }
     }
 
@@ -107,6 +122,7 @@ impl Config {
             accept_changes: false,
             package_dir: None,
             packages: Vec::new(),
+            disable_uninstall: false,
             destdir: None,
             prefix: None,
             exec_prefix: None,
@@ -124,6 +140,7 @@ impl Config {
             mandir: None,
             pam_modulesdir: None,
             systemd_unitsdir: Some("@sysconfdir@/systemd/user".to_string()),
+            subcmd: None,
         }
     }
 

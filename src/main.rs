@@ -5,14 +5,20 @@ mod install_spec;
 mod install_target;
 mod package;
 mod project;
+mod uninstall;
 
-use std::{env, fs, path::PathBuf};
+use std::{
+    env,
+    fs::{self, File},
+    io::prelude::*,
+    path::{Path, PathBuf},
+};
 
 use clap::Parser;
 use color_eyre::eyre::{bail, ensure, Context, Result};
 use xdg::BaseDirectories;
 
-use config::Config;
+use config::{Config, SubCommand};
 use dirs::Dirs;
 use install_spec::InstallSpec;
 use package::Package;
@@ -21,7 +27,9 @@ use project::Project;
 fn main() -> Result<()> {
     color_eyre::install()?;
     let opts = Config::parse();
+    let subcmd = opts.subcmd.clone();
     let dry_run = !opts.accept_changes;
+    let destdir = opts.destdir.clone();
     let uid = unsafe { libc::getuid() };
     let root_install = if !opts.system {
         uid == 0
@@ -34,6 +42,7 @@ fn main() -> Result<()> {
         }
         opts.system
     };
+    let disable_uninstall = opts.disable_uninstall.clone();
 
     let mut config = if root_install {
         Config::new_default_root()
@@ -68,7 +77,6 @@ fn main() -> Result<()> {
         env::current_dir().context("unable to get current directory")?,
         PathBuf::from,
     );
-    let destdir = opts.destdir.clone();
     let pkgs_to_install = opts.packages.clone();
 
     if root_install {
@@ -82,6 +90,15 @@ fn main() -> Result<()> {
     }
 
     let dirs = Dirs::new(config).context("unable to create dirs")?;
+
+    if let Some(subcmd) = subcmd {
+        match subcmd {
+            SubCommand::Uninstall(uninstall) => {
+                uninstall.run(Path::new(&dirs.localstatedir), dry_run)?;
+                return Ok(());
+            }
+        }
+    }
 
     // Try root/install.yml and root/.package/install.yml files
     let install_spec = {
@@ -115,23 +132,78 @@ fn main() -> Result<()> {
         })
         .collect::<Vec<Package>>();
 
-    // Check if the projcetdir is a release tarball instead of the
+    // Check if the projectdir is a release tarball instead of the
     // directory containing the source code
     let is_release_tarball = package_dir.join(".tarball").exists();
 
     for package in packages {
-        println!(">>> Package {}", package.name.as_ref().unwrap());
+        let pkg_name = package.name.clone().unwrap();
+        println!(">>> Package {}", pkg_name);
 
         let project_type = package.project_type.clone();
 
-        for target in package.targets(
+        let targets = package.targets(
             &dirs,
             Project::new_from_type(project_type, package_dir.clone(), is_release_tarball)?,
             &install_spec.version,
-        )? {
+        )?;
+
+        if !disable_uninstall {
+            let pkg_info = get_final_destination(
+                &dirs
+                    .localstatedir
+                    .join("rinstall")
+                    .join(format!("{}.pkg", &pkg_name)),
+                &destdir.as_deref(),
+            );
+            if dry_run {
+                println!("Would install installation data in {:?}", pkg_info);
+            } else {
+                println!("Installing installation data in {:?}", pkg_info);
+                fs::create_dir_all(pkg_info.parent().unwrap()).with_context(|| {
+                    format!("unable to create parent directory for {:?}", pkg_info)
+                })?;
+                ensure!(
+                    !pkg_info.exists(),
+                    "cannot install {} because it has already been installed",
+                    pkg_name
+                );
+                let mut file = File::create(&pkg_info)?;
+                file.write_all(
+                    serde_yaml::to_string(
+                        &targets
+                            .iter()
+                            .map(|target| target.destination.to_str().unwrap().to_string())
+                            .chain(vec![pkg_info.to_str().unwrap().to_string()].into_iter())
+                            .collect::<Vec<String>>(),
+                    )
+                    .with_context(|| {
+                        format!("unable to write installation info in {:?}", pkg_info)
+                    })?
+                    .as_bytes(),
+                )
+                .with_context(|| format!("unable to write into {:?}", pkg_info))?;
+            }
+        }
+
+        for target in targets {
             target.install(destdir.as_deref(), dry_run, &package_dir, &dirs)?;
         }
     }
 
     Ok(())
+}
+
+fn get_final_destination(
+    destination: &Path,
+    destdir: &Option<&str>,
+) -> PathBuf {
+    destdir.map_or(destination.to_owned(), |destdir| {
+        // join does not work when the argument (not the self) is an absolute path
+        PathBuf::from({
+            let mut s = destdir.to_string();
+            s.push_str(destination.as_os_str().to_str().unwrap());
+            s
+        })
+    })
 }
