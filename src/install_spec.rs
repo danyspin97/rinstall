@@ -6,6 +6,7 @@ use serde::Deserialize;
 use crate::Package;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct InstallSpec {
     #[serde(rename(deserialize = "rinstall"))]
     pub version: Version,

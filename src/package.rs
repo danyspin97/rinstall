@@ -25,6 +25,7 @@ enum Entry {
 }
 
 #[derive(Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 struct Completions {
     #[serde(default)]
     pub bash: Vec<Entry>,
@@ -35,6 +36,7 @@ struct Completions {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Package {
     pub name: Option<String>,
     #[serde(rename(deserialize = "type"))]

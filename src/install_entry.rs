@@ -7,6 +7,7 @@ use serde::{
 use void::Void;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct InstallEntry {
     #[serde(rename(deserialize = "src"))]
     pub source: PathBuf,
