@@ -56,11 +56,12 @@ impl Dirs {
     }
 
     fn append_home(&mut self) {
+        let home = &env::var("HOME").unwrap();
         macro_rules! append_home_to {
             ( $($var:ident),* ) => {
                 $(
                     if self.$var.is_relative() {
-                        self.$var = Path::new(&env::var("HOME").unwrap()).join(&self.$var);
+                        self.$var = Path::new(home).join(&self.$var);
                     }
                 )*
             };
