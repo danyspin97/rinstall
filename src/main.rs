@@ -45,7 +45,7 @@ fn main() -> Result<()> {
         }
         opts.system
     };
-    let disable_uninstall = opts.disable_uninstall.clone();
+    let disable_uninstall = opts.disable_uninstall;
 
     let mut config = if root_install {
         Config::new_default_root()

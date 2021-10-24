@@ -96,7 +96,7 @@ impl InstallTarget {
                 if templating {
                     let mut templating = Templating::new(&source)?;
                     templating
-                        .apply(&dirs)
+                        .apply(dirs)
                         .with_context(|| format!("unable to apply templating to {:?}", source))?;
                     write_to_file(&destination, &templating.contents)?;
                 } else {
@@ -138,7 +138,7 @@ impl InstallTarget {
                     })?;
                     if templating {
                         let mut templating = Templating::new(&source)?;
-                        templating.apply(&dirs).with_context(|| {
+                        templating.apply(dirs).with_context(|| {
                             format!("unable to apply templating to {:?}", source)
                         })?;
                         write_to_file(&destination, &templating.contents)?;
