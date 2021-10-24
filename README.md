@@ -22,9 +22,17 @@ or `.config/rinstall.yml`, using a default one otherwise.
 
 ## Features
 
-- Shift the install phase from packagers to developers
-- Flexible and configurable
+- List the files to install and their location in a declarative way
+- Ensure backward compatibility (no need to update `install.yml` every new rinstall version)
+- Support for both user and system-wide installation
+- Works inside the codebase or from the release tarball
+- Native support for _Rust_ programs and *cargo*
+- Easy uninstallation of packages
+- Allow templating of documentation and man pages
+- Support for GNU Directory standard, FHS and XDG BaseDirectories, with optional configuration
+- Support most common types of files
 - Reproducible installation
+- Packagers friendly
 
 ## Build
 
