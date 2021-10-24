@@ -223,15 +223,11 @@ impl Config {
         replace!(datarootdir, "@XDG_DATA_HOME@", xdg.get_data_home());
         replace!(datadir, "@XDG_DATA_HOME@", xdg.get_data_home());
         replace!(sysconfdir, "@XDG_CONFIG_HOME@", xdg.get_config_home());
-        replace!(
-            localstatedir,
-            "@XDG_STATE_HOME@",
-            PathBuf::from(".local/state")
-        );
-        let runtime_dir = xdg
-            .place_runtime_file(".")
-            .context("unable to get runtime directory")?;
-        replace!(runstatedir, "@XDG_RUNTIME_DIR@", runtime_dir);
+        replace!(localstatedir, "@XDG_STATE_HOME@", xdg.get_state_home());
+        let runtime_directory = xdg
+            .get_runtime_directory()
+            .context("insecure XDG_RUNTIME_DIR found")?;
+        replace!(runstatedir, "@XDG_RUNTIME_DIR@", runtime_directory);
         replace!(systemd_unitsdir, "@XDG_CONFIG_HOME@", xdg.get_config_home());
         replace!(systemd_unitsdir, "@sysconfdir@", xdg.get_config_home());
 
