@@ -136,9 +136,17 @@ impl InstallTarget {
                     fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
                         format!("unable to create directory {:?}", destination.parent())
                     })?;
-                    fs::copy(full_path, &destination).with_context(|| {
-                        format!("unable to copy file {:?} to {:?}", full_path, destination)
-                    })?;
+                    if templating {
+                        let mut templating = Templating::new(&source)?;
+                        templating.apply(&dirs).with_context(|| {
+                            format!("unable to apply templating to {:?}", source)
+                        })?;
+                        write_to_file(&destination, &templating.contents)?;
+                    } else {
+                        fs::copy(&source, &destination).with_context(|| {
+                            format!("unable to copy file {:?} to {:?}", source, destination)
+                        })?;
+                    }
 
                     Ok(())
                 })?;
