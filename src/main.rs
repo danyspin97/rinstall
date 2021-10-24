@@ -5,7 +5,9 @@ mod install_spec;
 mod install_target;
 mod package;
 mod project;
+mod templating;
 mod uninstall;
+mod utils;
 
 use std::{
     env,
@@ -23,6 +25,7 @@ use dirs::Dirs;
 use install_spec::InstallSpec;
 use package::Package;
 use project::Project;
+use utils::append_destdir;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -149,7 +152,7 @@ fn main() -> Result<()> {
         )?;
 
         if !disable_uninstall {
-            let pkg_info = get_final_destination(
+            let pkg_info = append_destdir(
                 &dirs
                     .localstatedir
                     .join("rinstall")
@@ -192,18 +195,4 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-fn get_final_destination(
-    destination: &Path,
-    destdir: &Option<&str>,
-) -> PathBuf {
-    destdir.map_or(destination.to_owned(), |destdir| {
-        // join does not work when the argument (not the self) is an absolute path
-        PathBuf::from({
-            let mut s = destdir.to_string();
-            s.push_str(destination.as_os_str().to_str().unwrap());
-            s
-        })
-    })
 }

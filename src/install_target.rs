@@ -1,6 +1,5 @@
 use std::{
-    fs::{self, File},
-    io::{BufWriter, Write},
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -8,7 +7,9 @@ use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
 use walkdir::WalkDir;
 
 use crate::install_entry::InstallEntry;
+use crate::templating::Templating;
 use crate::Dirs;
+use crate::{append_destdir, utils::write_to_file};
 
 pub struct InstallTarget {
     pub source: PathBuf,
@@ -64,15 +65,7 @@ impl InstallTarget {
             destination,
             templating,
         } = self;
-        // handle destdir
-        let destination = destdir.map_or(destination.to_owned(), |destdir| {
-            // join does not work when the argument (not the self) is an absolute path
-            PathBuf::from({
-                let mut s = destdir.to_string();
-                s.push_str(destination.as_os_str().to_str().unwrap());
-                s
-            })
-        });
+        let destination = append_destdir(&destination, &destdir);
 
         ensure!(source.exists(), "{:?} does not exists", source);
 
@@ -101,18 +94,11 @@ impl InstallTarget {
                     format!("unable to create directory {:?}", destination.parent())
                 })?;
                 if templating {
-                    let contents = fs::read_to_string(&source)
-                        .with_context(|| format!("unable to read file {:?}", source))?;
-                    BufWriter::new(
-                        File::create(&destination)
-                            .with_context(|| format!("unable to create file {:?}", destination))?,
-                    )
-                    .write(
-                        apply_templating_to(contents, dirs)
-                            .with_context(|| format!("unable to apply templating to {:?}", source))?
-                            .as_bytes(),
-                    )
-                    .with_context(|| format!("unable to write to file {:?}", destination))?;
+                    let mut templating = Templating::new(&source)?;
+                    templating
+                        .apply(&dirs)
+                        .with_context(|| format!("unable to apply templating to {:?}", source))?;
+                    write_to_file(&destination, &templating.contents)?;
                 } else {
                     fs::copy(&source, &destination).with_context(|| {
                         format!("unable to copy file {:?} to {:?}", source, destination)
@@ -162,60 +148,4 @@ impl InstallTarget {
 
         Ok(())
     }
-}
-
-fn apply_templating_to(
-    s: String,
-    dirs: &Dirs,
-) -> Result<String> {
-    let mut s = s;
-
-    macro_rules! replace_impl {
-        ( $dir:expr, $needle:literal ) => {
-            s = s.replace(
-                $needle,
-                $dir.as_os_str()
-                    .to_str()
-                    .with_context(|| format!("unable to convert {:?} to String", $dir))?,
-            );
-        };
-    }
-
-    macro_rules! replace {
-        ( $dir:ident, $needle:literal ) => {
-            replace_impl!(&dirs.$dir, $needle);
-        };
-    }
-
-    macro_rules! replace_when_some {
-        ( $dir:ident, $needle:literal ) => {
-            if let Some($dir) = &dirs.$dir {
-                replace_impl!($dir, $needle);
-            } else {
-                // TODO: Is this needed?
-                ensure!(
-                    !s.contains($needle),
-                    "tried replacing {} when its value is none",
-                    $needle
-                );
-            }
-        };
-    }
-
-    replace_when_some!(prefix, "@prefix@");
-    replace_when_some!(exec_prefix, "@exec_prefix@");
-    replace!(bindir, "@bindir@");
-    replace!(libdir, "@libdir@");
-    replace!(datarootdir, "@datarootdir@");
-    replace!(datadir, "@datadir@");
-    replace!(sysconfdir, "@sysconfdir@");
-    replace!(localstatedir, "@localstatedir@");
-    replace!(runstatedir, "@runstatedir@");
-    replace_when_some!(includedir, "@includedir@");
-    replace_when_some!(docdir, "@docdir@");
-    replace_when_some!(mandir, "@mandir@");
-    replace_when_some!(pam_modulesdir, "@pam_moduledirs@");
-    replace!(systemd_unitsdir, "@systemd_unitsdir@");
-
-    Ok(s)
 }
