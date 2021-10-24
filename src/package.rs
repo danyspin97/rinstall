@@ -179,30 +179,47 @@ impl Package {
             "desktop"
         ));
 
-        results.extend(install_files!(
-            appstream_metadata,
-            &dirs.datarootdir.join("metainfo"),
-            &project.projectdir,
-            "appstream_metadata"
-        ));
+        if system_install {
+            results.extend(install_files!(
+                appstream_metadata,
+                &dirs.datarootdir.join("metainfo"),
+                &project.projectdir,
+                "appstream_metadata"
+            ));
+        }
 
+        let mut completions = self
+            .completions
+            .bash
+            .into_iter()
+            .map(|completion| {
+                (
+                    completion,
+                    if system_install {
+                        "bash-completion/completions"
+                    } else {
+                        "bash-completion"
+                    },
+                )
+            })
+            .collect::<Vec<(Entry, &'static str)>>();
+        if system_install {
+            completions.extend(
+                self.completions
+                    .fish
+                    .into_iter()
+                    .map(|completion| (completion, "fish/vendor_completions.d")),
+            );
+            completions.extend(
+                self.completions
+                    .zsh
+                    .into_iter()
+                    .map(|completion| (completion, "zsh/site-functions")),
+            );
+        }
         results.extend(
-            self.completions
-                .bash
+            completions
                 .into_iter()
-                .map(|completion| (completion, "bash-completion/completions"))
-                .chain(
-                    self.completions
-                        .fish
-                        .into_iter()
-                        .map(|completion| (completion, "fish/vendor_completions.d")),
-                )
-                .chain(
-                    self.completions
-                        .zsh
-                        .into_iter()
-                        .map(|completion| (completion, "zsh/site-functions")),
-                )
                 .map(|(entry, completionsdir)| -> Result<InstallTarget> {
                     InstallTarget::new(
                         entry!(entry),
