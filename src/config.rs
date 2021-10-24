@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::Parser;
 use color_eyre::eyre::{Context, ContextCompat, Result};
 use serde::Deserialize;
