@@ -36,8 +36,8 @@ fn main() -> Result<()> {
     } else {
         if uid != 0 {
             ensure!(
-                (!opts.system || dry_run),
-                "Run rinstall as root to execute a system installation"
+                (!opts.system || dry_run || destdir.is_some()),
+                "Run rinstall as root to execute a system installation or use destdir"
             );
         }
         opts.system
