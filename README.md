@@ -355,6 +355,43 @@ by default). If only `src` is provided, and the name of the file starts with `li
 
 For systemd units; they will be installed in `@libdir@/systemd/system` (`/usr/local/lib/systemd/system` by default).
 
+#### `icons`
+
+(_since 0.1.0_)
+
+For icons. There two different locations for icons:
+
+- `@datarootdir@/pixmaps` (system-wide only)
+- `@datarootdir@/icons`
+
+To install an icon into one or the other, use `pixmaps`:
+
+```yaml
+icons:
+  - src: myicon.svg
+    pixmaps: true
+```
+
+The icons in the latter are divided into different folders by:
+
+- `theme`, which defaults to `hicolor`
+- `dimensions`, which is the size of the icon in the form of `YxY` (`48x48`) or
+  `scalable` for svg icons (**mandatory**)
+- `type`, which defaults to `app`
+
+Example:
+
+```yaml
+icons:
+  - src: myicon.svg
+    dimensions: scalable
+```
+
+`theme` and `type` are optional. For more information the entries in `@datarootdir@/icons`, have a
+look at the [Directory Layout] of the freedesktop icon theme specification.
+
+[Directory Layout]: https://specifications.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html#directory_layout
+
 ### Templating
 
 Sometimes it might be required to refer to some installed file or some location. However,

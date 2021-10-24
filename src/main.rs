@@ -1,5 +1,6 @@
 mod config;
 mod dirs;
+mod icon;
 mod install_entry;
 mod install_spec;
 mod install_target;
@@ -149,6 +150,7 @@ fn main() -> Result<()> {
             &dirs,
             Project::new_from_type(project_type, package_dir.clone(), is_release_tarball)?,
             &install_spec.version,
+            root_install,
         )?;
 
         if !disable_uninstall {

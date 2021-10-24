@@ -4,6 +4,7 @@ use color_eyre::eyre::{ensure, Context, ContextCompat, Result};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 
+use crate::icon::Icon;
 use crate::install_entry::{string_or_struct, InstallEntry};
 use crate::install_target::InstallTarget;
 use crate::project::Project;
@@ -22,6 +23,13 @@ pub enum Type {
 enum Entry {
     #[serde(deserialize_with = "string_or_struct")]
     InstallEntry(InstallEntry),
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum IconEntry {
+    #[serde(deserialize_with = "string_or_struct")]
+    Icon(Icon),
 }
 
 #[derive(Deserialize, Default)]
@@ -67,6 +75,8 @@ pub struct Package {
     pam_modules: Vec<Entry>,
     #[serde(default, rename(deserialize = "systemd-units"))]
     systemd_units: Vec<Entry>,
+    #[serde(default)]
+    icons: Vec<IconEntry>,
 }
 
 macro_rules! entry {
@@ -89,6 +99,7 @@ impl Package {
         dirs: &Dirs,
         project: Project,
         rinstall_version: &Version,
+        system_install: bool,
     ) -> Result<Vec<InstallTarget>> {
         let allowed_version = vec!["0.1.0"];
         allowed_version
@@ -253,6 +264,35 @@ impl Package {
             &project.projectdir,
             "systemd_units"
         ));
+
+        results.extend(
+            self.icons
+                .into_iter()
+                .map(|icon| -> Icon {
+                    match icon {
+                        IconEntry::Icon(icon) => icon,
+                    }
+                })
+                .filter(|icon| system_install || !icon.pixmaps)
+                .map(|icon| -> Result<InstallTarget> {
+                    InstallTarget::new(
+                        InstallEntry {
+                            source: icon.source.clone(),
+                            destination: Some(icon.get_destination().with_context(|| {
+                                format!(
+                                    "unable to generate destination for icon {:?}",
+                                    icon.source.clone()
+                                )
+                            })?),
+                            templating: false,
+                        },
+                        &dirs.datarootdir,
+                        &project.projectdir,
+                    )
+                })
+                .collect::<Result<Vec<InstallTarget>>>()
+                .context("error while iterating icons")?,
+        );
 
         Ok(results)
     }
