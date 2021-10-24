@@ -41,7 +41,7 @@ pub struct Config {
     #[clap(long = "disable-uninstall")]
     pub disable_uninstall: bool,
     #[serde(skip_deserializing)]
-    #[clap(short = 'D', long)]
+    #[clap(short = 'D', long, requires = "system")]
     pub destdir: Option<String>,
     #[clap(long)]
     pub prefix: Option<String>,
