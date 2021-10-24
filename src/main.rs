@@ -10,9 +10,7 @@ mod uninstall;
 mod utils;
 
 use std::{
-    env,
-    fs::{self, File},
-    io::prelude::*,
+    env, fs,
     path::{Path, PathBuf},
 };
 
@@ -26,6 +24,8 @@ use install_spec::InstallSpec;
 use package::Package;
 use project::Project;
 use utils::append_destdir;
+
+use crate::utils::write_to_file;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -171,9 +171,9 @@ fn main() -> Result<()> {
                     "cannot install {} because it has already been installed",
                     pkg_name
                 );
-                let mut file = File::create(&pkg_info)?;
-                file.write_all(
-                    serde_yaml::to_string(
+                write_to_file(
+                    &pkg_info,
+                    &serde_yaml::to_string(
                         &targets
                             .iter()
                             .map(|target| target.destination.to_str().unwrap().to_string())
@@ -181,11 +181,10 @@ fn main() -> Result<()> {
                             .collect::<Vec<String>>(),
                     )
                     .with_context(|| {
-                        format!("unable to write installation info in {:?}", pkg_info)
-                    })?
-                    .as_bytes(),
+                        format!("unable to serialize installation into {:?}", pkg_info)
+                    })?,
                 )
-                .with_context(|| format!("unable to write into {:?}", pkg_info))?;
+                .with_context(|| format!("unable to write installation info in {:?}", pkg_info))?;
             }
         }
 
