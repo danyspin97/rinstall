@@ -402,6 +402,13 @@ For terminfo sources; they will be installed in `@datarootdir@/terminfo`
 _Note_: The source files won't be compiled by **rinstall**. Please compile them manually after
 installation by using `tic`.
 
+#### `licenses`
+
+(_since 0.1.0_)
+
+For licenses; they will be installed in `@datarootdir@/licenses/<pkg-name>`
+(`/usr/local/share/licenses/<pkg-name>` by default).
+
 ### Templating
 
 Sometimes it might be required to refer to some installed file or some location. However,

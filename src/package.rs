@@ -79,6 +79,8 @@ pub struct Package {
     icons: Vec<IconEntry>,
     #[serde(default)]
     terminfo: Vec<Entry>,
+    #[serde(default)]
+    licenses: Vec<Entry>,
 }
 
 macro_rules! entry {
@@ -364,6 +366,13 @@ impl Package {
             );
         }
 
+        results.extend(install_files!(
+            licenses,
+            &dirs.datarootdir.join("licenses").join(&package_name),
+            &project.projectdir,
+            "licenses"
+        ));
+
         Ok(results)
     }
 
@@ -425,6 +434,7 @@ impl Package {
         check_version!(rinstall_version, "systemd_units", systemd_units, ">=0.1.0");
         check_version!(rinstall_version, "icons", icons, ">=0.1.0");
         check_version!(rinstall_version, "terminfo", terminfo, ">=0.1.0");
+        check_version!(rinstall_version, "licenses", licenses, ">=0.1.0");
 
         Ok(())
     }
