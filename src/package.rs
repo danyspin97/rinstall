@@ -77,6 +77,8 @@ pub struct Package {
     systemd_units: Vec<Entry>,
     #[serde(default)]
     icons: Vec<IconEntry>,
+    #[serde(default)]
+    terminfo: Vec<Entry>,
 }
 
 macro_rules! entry {
@@ -310,6 +312,65 @@ impl Package {
                 .collect::<Result<Vec<InstallTarget>>>()
                 .context("error while iterating icons")?,
         );
+
+        if system_install {
+            results.extend(
+                self.terminfo
+                    .into_iter()
+                    .map(|entry| -> Result<InstallTarget> {
+                        let entry = entry!(entry);
+                        ensure!(
+                            !entry
+                                .source
+                                .as_os_str()
+                                .to_str()
+                                .with_context(|| format!(
+                                    "unable to convert {:?} to string",
+                                    entry.source
+                                ))?
+                                .ends_with("/"),
+                            "the terminfo entry cannot be a directory"
+                        );
+                        let use_source_name = if let Some(destination) = &entry.destination {
+                            if !destination
+                                .as_os_str()
+                                .to_str()
+                                .with_context(|| {
+                                    format!("unable to convert {:?} to string", entry.source)
+                                })?
+                                .ends_with("/")
+                            {
+                                false
+                            } else {
+                                true
+                            }
+                        } else {
+                            true
+                        };
+                        let name = if use_source_name {
+                            &entry.source
+                        } else {
+                            entry.destination.as_ref().unwrap()
+                        };
+                        let initial = name
+                            .file_name()
+                            .with_context(|| format!("unable to get filename of file {:?}", name))?
+                            .to_str()
+                            .with_context(|| format!("unable to convert {:?} to string", name))?
+                            .chars()
+                            .next()
+                            .with_context(|| {
+                                format!("terminfo entry {:?} contains an empty filename", name)
+                            })?
+                            .to_lowercase()
+                            .to_string();
+                        let install_dir = dirs.datarootdir.join("terminfo").join(&initial);
+                        InstallTarget::new(entry, &install_dir, &project.projectdir)
+                    })
+                    .collect::<Result<Vec<InstallTarget>>>()
+                    .context("error while iterating terminfo files")?,
+            );
+        }
 
         Ok(results)
     }

@@ -392,6 +392,16 @@ look at the [Directory Layout] of the freedesktop icon theme specification.
 
 [Directory Layout]: https://specifications.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html#directory_layout
 
+#### `terminfo`
+
+(_since 0.1.0_)
+
+For terminfo sources; they will be installed in `@datarootdir@/terminfo`
+(`/usr/local/share/terminfo` by default).
+
+_Note_: The source files won't be compiled by **rinstall**. Please compile them manually after
+installation by using `tic`.
+
 ### Templating
 
 Sometimes it might be required to refer to some installed file or some location. However,
