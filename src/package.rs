@@ -89,12 +89,6 @@ macro_rules! entry {
     };
 }
 
-macro_rules! check_version {
-    ( $version:ident, $req:literal ) => {
-        ensure!(VersionReq::parse($req).unwrap().matches(&$version), "fail");
-    };
-}
-
 impl Package {
     pub fn targets(
         self,
@@ -109,6 +103,8 @@ impl Package {
             .map(|v| Version::parse(v).unwrap())
             .find(|v| v == rinstall_version)
             .with_context(|| format!("{} is not a valid rinstall version", rinstall_version))?;
+
+        self.check_entries(rinstall_version)?;
 
         let package_name = self.name.unwrap();
         let mut results = Vec::new();
@@ -127,7 +123,6 @@ impl Package {
 
         results.extend(install_files!(exe, &dirs.bindir, &project.outputdir, "exe"));
         if let Some(sbindir) = &dirs.sbindir {
-            check_version!(rinstall_version, ">=0.1.0");
             results.extend(install_files!(
                 admin_exe,
                 sbindir,
@@ -160,12 +155,10 @@ impl Package {
             "config"
         ));
         if let Some(mandir) = &dirs.mandir {
-            check_version!(rinstall_version, ">=0.1.0");
             results.extend(install_files!(man, mandir, &project.projectdir, "man"));
         }
 
         if let Some(docdir) = &dirs.docdir {
-            check_version!(rinstall_version, ">=0.1.0");
             results.extend(install_files!(
                 docs,
                 &docdir.join(Path::new(&package_name)),
@@ -234,7 +227,6 @@ impl Package {
         );
 
         if let Some(pam_modulesdir) = &dirs.pam_modulesdir {
-            check_version!(rinstall_version, ">=0.1.0");
             results.extend(
                 self.pam_modules
                     .into_iter()
@@ -373,5 +365,67 @@ impl Package {
         }
 
         Ok(results)
+    }
+
+    fn check_entries(
+        &self,
+        rinstall_version: &Version,
+    ) -> Result<()> {
+        macro_rules! check_version_expr {
+            ( $version:ident, $name:literal, $type:expr, $req:literal ) => {
+                let requires = VersionReq::parse($req).unwrap();
+                ensure!(
+                    $type.is_empty() || requires.matches(&$version),
+                    "{} requires version {}",
+                    $name,
+                    requires
+                );
+            };
+        }
+        macro_rules! check_version {
+            ( $version:ident, $name:literal, $type:ident, $req:literal ) => {
+                check_version_expr!($version, $name, self.$type, $req);
+            };
+        }
+
+        check_version!(rinstall_version, "exe", exe, ">=0.1.0");
+        check_version!(rinstall_version, "admin_exe", admin_exe, ">=0.1.0");
+        check_version!(rinstall_version, "libs", libs, ">=0.1.0");
+        check_version!(rinstall_version, "libexec", libexec, ">=0.1.0");
+        check_version!(rinstall_version, "man", man, ">=0.1.0");
+        check_version!(rinstall_version, "data", data, ">=0.1.0");
+        check_version!(rinstall_version, "docs", docs, ">=0.1.0");
+        check_version!(rinstall_version, "config", config, ">=0.1.0");
+        check_version!(rinstall_version, "desktop_files", desktop_files, ">=0.1.0");
+        check_version!(
+            rinstall_version,
+            "appstream_metadata",
+            appstream_metadata,
+            ">=0.1.0"
+        );
+        check_version_expr!(
+            rinstall_version,
+            "pam_moduless",
+            self.completions.bash,
+            ">=0.1.0"
+        );
+        check_version_expr!(
+            rinstall_version,
+            "pam_moduless",
+            self.completions.fish,
+            ">=0.1.0"
+        );
+        check_version_expr!(
+            rinstall_version,
+            "pam_moduless",
+            self.completions.zsh,
+            ">=0.1.0"
+        );
+        check_version!(rinstall_version, "pam_modules", pam_modules, ">=0.1.0");
+        check_version!(rinstall_version, "systemd_units", systemd_units, ">=0.1.0");
+        check_version!(rinstall_version, "icons", icons, ">=0.1.0");
+        check_version!(rinstall_version, "terminfo", terminfo, ">=0.1.0");
+
+        Ok(())
     }
 }
