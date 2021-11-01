@@ -39,7 +39,7 @@ impl Project {
 
 fn get_target_dir_for_rust() -> Result<PathBuf> {
     Ok(PathBuf::from({
-        // if target directory does not exists, try reading the "target_directory"
+        // if target directory does not exist, try reading the "target_directory"
         // from cargo metadata
         if Path::new("target").exists() {
             "target".to_string()

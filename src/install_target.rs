@@ -67,7 +67,7 @@ impl InstallTarget {
         } = self;
         let destination = append_destdir(&destination, &destdir);
 
-        ensure!(source.exists(), "{:?} does not exists", source);
+        ensure!(source.exists(), "{:?} does not exist", source);
 
         if source.is_file() {
             let destination = if destination.as_os_str().to_str().unwrap().ends_with('/') {

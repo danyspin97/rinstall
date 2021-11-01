@@ -58,7 +58,7 @@ fn main() -> Result<()> {
 
     let config_file = if let Some(config_file) = &opts.config {
         let config_file = PathBuf::from(config_file);
-        ensure!(config_file.exists(), "config file does not exists");
+        ensure!(config_file.exists(), "config file does not exist");
         config_file
     } else if root_install {
         PathBuf::from("/etc/rinstall.yml")
