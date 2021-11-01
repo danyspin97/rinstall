@@ -5,7 +5,7 @@ use std::{
     process::Command,
 };
 
-use color_eyre::eyre::{Context, Result};
+use color_eyre::eyre::{Context, ContextCompat, Result};
 
 // Contains data about the project that will be installed
 // It doesn't refer to the system and the actual installation directories
@@ -28,7 +28,7 @@ impl Project {
                 projectdir.clone()
             } else {
                 match project_type {
-                    Type::Rust => get_target_dir_for_rust()?,
+                    Type::Rust => get_target_dir_for_rust(&projectdir)?,
                     Type::Custom => projectdir.clone(),
                 }
             },
@@ -37,19 +37,20 @@ impl Project {
     }
 }
 
-fn get_target_dir_for_rust() -> Result<PathBuf> {
+fn get_target_dir_for_rust(projectdir: &Path) -> Result<PathBuf> {
     Ok(PathBuf::from({
         // if target directory does not exist, try reading the "target_directory"
         // from cargo metadata
-        if Path::new("target").exists() {
-            "target".to_string()
-        } else if Command::new("cargo")
-            .output()
-            .map_or(false, |output| output.status.success())
+        if !projectdir.join("target").exists()
+            && Command::new("cargo")
+                .current_dir(projectdir)
+                .output()
+                .map_or(false, |output| output.status.success())
         {
             json::parse(&String::from_utf8_lossy(
                 &Command::new("cargo")
                     .arg("metadata")
+                    .current_dir(projectdir)
                     .uid(
                         // cargo metadata only works when running as the current user that has built
                         // the project. Otherwise it will use metadata for the root user and
@@ -68,7 +69,12 @@ fn get_target_dir_for_rust() -> Result<PathBuf> {
             .context("unable to parse JSON from `cargo metadata` output")?["target_directory"]
                 .to_string()
         } else {
-            "target".to_string()
+            projectdir
+                .join("target")
+                .as_os_str()
+                .to_str()
+                .with_context(|| format!("unable to convert {:?} to string", projectdir))?
+                .to_string()
         }
     })
     .join("release"))
