@@ -172,7 +172,52 @@ impl Package {
             ));
         }
         if let Some(mandir) = &dirs.mandir {
-            results.extend(get_files!(man, mandir, &project.projectdir, "man"));
+            results.extend(
+                self.man
+                    .into_iter()
+                    .map(|entry| -> Result<InstallTarget> {
+                        let Entry::InstallEntry(entry) = entry;
+                        ensure!(
+                            !entry
+                                .source
+                                .as_os_str()
+                                .to_str()
+                                .with_context(|| format!(
+                                    "unable to convert {:?} to string",
+                                    entry.source
+                                ))?
+                                .ends_with('/'),
+                            "the man entry cannot be a directory"
+                        );
+                        let use_source_name = if let Some(destination) = &entry.destination {
+                            destination
+                                .as_os_str()
+                                .to_str()
+                                .with_context(|| {
+                                    format!("unable to convert {:?} to string", entry.source)
+                                })?
+                                .ends_with('/')
+                        } else {
+                            true
+                        };
+                        let name = if use_source_name {
+                            &entry.source
+                        } else {
+                            entry.destination.as_ref().unwrap()
+                        };
+                        let man_cat = name
+                            .extension()
+                            .with_context(|| format!("unable to get extension of file {:?}", name))?
+                            .to_str()
+                            .with_context(|| format!("unable to convert {:?} to string", name))?
+                            .to_string();
+                        ensure!(man_cat.chars().next().unwrap().is_ascii_digit(), "the last");
+                        let install_dir = mandir.join(format!("man{}", &man_cat));
+                        InstallTarget::new(entry, &install_dir, &project.projectdir, true)
+                    })
+                    .collect::<Result<Vec<InstallTarget>>>()
+                    .context("error while iterating terminfo files")?,
+            );
         }
 
         if let Some(docdir) = &dirs.docdir {
