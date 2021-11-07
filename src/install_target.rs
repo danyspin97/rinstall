@@ -61,6 +61,8 @@ impl InstallTarget {
         self,
         destdir: Option<&str>,
         dry_run: bool,
+        force: bool,
+        update_config: bool,
         package_dir: &Path,
         dirs: &Dirs,
         pkg_info: &mut PackageInfo,
@@ -70,7 +72,7 @@ impl InstallTarget {
             destination,
             templating,
             replace,
-        } = self;
+        } = &self;
         let destination = append_destdir(&destination, &destdir);
 
         ensure!(source.exists(), "{:?} does not exist", source);
@@ -85,6 +87,19 @@ impl InstallTarget {
             } else {
                 destination
             };
+            // destdir conflicts with force and update-config
+            if destdir.is_none()
+                && self.handle_existing_files(
+                    &source,
+                    &destination,
+                    package_dir,
+                    dry_run,
+                    force,
+                    update_config,
+                )?
+            {
+                return Ok(());
+            }
             println!(
                 "{} {:?} -> {:?}",
                 if dry_run {
@@ -99,7 +114,7 @@ impl InstallTarget {
                 fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
                     format!("unable to create directory {:?}", destination.parent())
                 })?;
-                if templating {
+                if *templating {
                     let mut templating = Templating::new(&source)?;
                     templating
                         .apply(dirs)
@@ -115,7 +130,7 @@ impl InstallTarget {
                 } else {
                     &destination
                 };
-                pkg_info.add_file(&destination, dest_wo_destdir, replace)?;
+                pkg_info.add_file(&destination, dest_wo_destdir, *replace)?;
             }
         } else if source.is_dir() {
             WalkDir::new(&source)
@@ -132,6 +147,19 @@ impl InstallTarget {
                     })?;
                     let source = source.join(relative_path);
                     let destination = destination.join(relative_path);
+                    // destdir conflicts with force and update-config
+                    if destdir.is_none()
+                        && self.handle_existing_files(
+                            &source,
+                            &destination,
+                            package_dir,
+                            dry_run,
+                            force,
+                            update_config,
+                        )?
+                    {
+                        return Ok(());
+                    }
                     println!(
                         "{} {:?} -> {:?}",
                         if dry_run {
@@ -148,7 +176,7 @@ impl InstallTarget {
                     fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
                         format!("unable to create directory {:?}", destination.parent())
                     })?;
-                    if templating {
+                    if *templating {
                         let mut templating = Templating::new(&source)?;
                         templating.apply(dirs).with_context(|| {
                             format!("unable to apply templating to {:?}", source)
@@ -167,5 +195,64 @@ impl InstallTarget {
         }
 
         Ok(())
+    }
+
+    // return true if the file should be skipped
+    fn handle_existing_files(
+        &self,
+        source: &Path,
+        destination: &Path,
+        package_dir: &Path,
+        dry_run: bool,
+        force: bool,
+        update_config: bool,
+    ) -> Result<bool> {
+        if destination.exists() && self.replace {
+            if !force {
+                if dry_run {
+                    eprintln!(
+                        "WARNING: file {:?} already exists, add --force to overwrite it",
+                        destination
+                    );
+                } else {
+                    bail!(
+                        "file {:?} already exists, add --force to overwrite it",
+                        destination
+                    );
+                }
+            } else {
+                if dry_run {
+                    eprintln!(
+                        "WARNING: file {:?} already exists, it would be overwritten",
+                        destination
+                    );
+                } else {
+                    eprintln!(
+                        "WARNING: file {:?} already exists, overwriting it",
+                        destination
+                    );
+                }
+            }
+        }
+        if destination.exists() && !self.replace {
+            if update_config {
+                if dry_run {
+                    eprintln!("WARNING: config {:?} will be overwritten", destination);
+                } else {
+                    eprintln!("WARNING: config {:?} is being overwritten", destination);
+                }
+            } else {
+                println!(
+                    "{} config {:?} -> {:?}",
+                    if dry_run { "Would skip" } else { "Skipping" },
+                    source.strip_prefix(&package_dir).unwrap_or(&source),
+                    destination
+                );
+                // Skip installation
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }

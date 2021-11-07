@@ -21,6 +21,19 @@ pub struct Config {
         about = "Accept the changes and perform the installation"
     )]
     pub accept_changes: bool,
+    #[clap(
+        short = 'f',
+        long = "force",
+        about = "Force the installation by overwriting (non-config) files",
+        conflicts_with = "destdir"
+    )]
+    pub force: bool,
+    #[clap(
+        long = "update-config",
+        about = "Overwrite the existing configurations of the package",
+        conflicts_with = "destdir"
+    )]
+    pub update_config: bool,
     #[serde(skip_deserializing)]
     #[clap(
         short = 'P',
@@ -89,6 +102,8 @@ impl Config {
             config: None,
             system: true,
             accept_changes: false,
+            force: false,
+            update_config: false,
             package_dir: None,
             packages: Vec::new(),
             disable_uninstall: false,
@@ -118,6 +133,8 @@ impl Config {
             config: None,
             system: false,
             accept_changes: false,
+            force: false,
+            update_config: false,
             package_dir: None,
             packages: Vec::new(),
             disable_uninstall: false,

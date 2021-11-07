@@ -33,6 +33,8 @@ fn main() -> Result<()> {
     let opts = Config::parse();
     let subcmd = opts.subcmd.clone();
     let dry_run = !opts.accept_changes;
+    let force = opts.force;
+    let update_config = opts.update_config;
     let destdir = opts.destdir.clone();
     let uid = unsafe { libc::getuid() };
     let root_install = if !opts.system {
@@ -159,6 +161,8 @@ fn main() -> Result<()> {
             target.install(
                 destdir.as_deref(),
                 dry_run,
+                force,
+                update_config,
                 &package_dir,
                 &dirs,
                 &mut pkg_info,
