@@ -54,21 +54,19 @@ impl Uninstall {
                 } else {
                     println!("Would remove {:?}", file.path);
                 }
+            } else if !file.replace && modified && !self.force {
+                println!("Keeping file {:?}", &file.path);
+            } else if modified && (file.replace || self.force) {
+                eprintln!(
+                    "WARNING: modified file {:?} has been uninstalled",
+                    &file.path
+                );
+                fs::remove_file(&file.path)
+                    .with_context(|| format!("unable to remove file {:?}", file.path))?;
             } else {
-                if !file.replace && modified && !self.force {
-                    println!("Keeping file {:?}", &file.path);
-                } else if modified && (file.replace || self.force) {
-                    eprintln!(
-                        "WARNING: modified file {:?} has been uninstalled",
-                        &file.path
-                    );
-                    fs::remove_file(&file.path)
-                        .with_context(|| format!("unable to remove file {:?}", file.path))?;
-                } else {
-                    println!("Removing {:?}", &file.path);
-                    fs::remove_file(&file.path)
-                        .with_context(|| format!("unable to remove file {:?}", file.path))?;
-                }
+                println!("Removing {:?}", &file.path);
+                fs::remove_file(&file.path)
+                    .with_context(|| format!("unable to remove file {:?}", file.path))?;
             }
         }
 

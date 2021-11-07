@@ -320,7 +320,7 @@ impl Package {
                 self.terminfo
                     .into_iter()
                     .map(|entry| -> Result<InstallTarget> {
-                        let entry = entry!(entry);
+                        let Entry::InstallEntry(entry) = entry;
                         ensure!(
                             !entry
                                 .source
@@ -330,22 +330,17 @@ impl Package {
                                     "unable to convert {:?} to string",
                                     entry.source
                                 ))?
-                                .ends_with("/"),
+                                .ends_with('/'),
                             "the terminfo entry cannot be a directory"
                         );
                         let use_source_name = if let Some(destination) = &entry.destination {
-                            if !destination
+                            destination
                                 .as_os_str()
                                 .to_str()
                                 .with_context(|| {
                                     format!("unable to convert {:?} to string", entry.source)
                                 })?
-                                .ends_with("/")
-                            {
-                                false
-                            } else {
-                                true
-                            }
+                                .ends_with('/')
                         } else {
                             true
                         };
