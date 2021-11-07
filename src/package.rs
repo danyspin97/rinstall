@@ -227,7 +227,7 @@ impl Package {
                         entry!(entry),
                         &dirs.datarootdir.join(completionsdir),
                         &project.projectdir,
-                        false,
+                        true,
                     )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
@@ -270,7 +270,7 @@ impl Package {
                             },
                             pam_modulesdir,
                             &project.outputdir,
-                            false,
+                            true,
                         )
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
@@ -308,7 +308,7 @@ impl Package {
                         },
                         &dirs.datarootdir,
                         &project.projectdir,
-                        false,
+                        true,
                     )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
@@ -362,7 +362,7 @@ impl Package {
                             .to_lowercase()
                             .to_string();
                         let install_dir = dirs.datarootdir.join("terminfo").join(&initial);
-                        InstallTarget::new(entry, &install_dir, &project.projectdir, false)
+                        InstallTarget::new(entry, &install_dir, &project.projectdir, true)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
                     .context("error while iterating terminfo files")?,
