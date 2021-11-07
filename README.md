@@ -389,7 +389,7 @@ The icons in the latter are divided into different folders by:
 - `theme`, which defaults to `hicolor`
 - `dimensions`, which is the size of the icon in the form of `YxY` (`48x48`) or
   `scalable` for svg icons (**mandatory**)
-- `type`, which defaults to `app`
+- `type`, which defaults to `apps`
 
 Example:
 

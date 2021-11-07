@@ -41,7 +41,7 @@ impl Icon {
             );
 
             let default_theme: &'static str = "hicolor";
-            let default_icon_type: &'static str = "app";
+            let default_icon_type: &'static str = "apps";
             let theme = self.theme.as_deref().unwrap_or(default_theme);
             let icon_type = self.icon_type.as_deref().unwrap_or(default_icon_type);
 
