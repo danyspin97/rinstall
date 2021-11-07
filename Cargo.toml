@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+blake3 = "1.1.0"
 clap = "3.0.0-beta.5"
 color-eyre = "0.5.11"
 json = "0.12.4"

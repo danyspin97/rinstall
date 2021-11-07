@@ -111,57 +111,62 @@ impl Package {
         let package_name = self.name.unwrap();
         let mut results = Vec::new();
 
-        macro_rules! install_files {
-            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
+        macro_rules! get_files_impl {
+            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal, $replace:literal ) => {
                 self.$files
                     .into_iter()
                     .map(|entry| -> Result<InstallTarget> {
-                        InstallTarget::new(entry!(entry), $install_dir, $parent_dir)
+                        InstallTarget::new(entry!(entry), $install_dir, $parent_dir, $replace)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
                     .with_context(|| format!("error while iterating {} files", $name))?
             };
         }
+        macro_rules! get_files {
+            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
+                get_files_impl!($files, $install_dir, $parent_dir, $name, true)
+            };
+        }
+        macro_rules! get_no_replace_files {
+            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
+                get_files_impl!($files, $install_dir, $parent_dir, $name, false)
+            };
+        }
 
-        results.extend(install_files!(exe, &dirs.bindir, &project.outputdir, "exe"));
+        results.extend(get_files!(exe, &dirs.bindir, &project.outputdir, "exe"));
         if let Some(sbindir) = &dirs.sbindir {
-            results.extend(install_files!(
+            results.extend(get_files!(
                 admin_exe,
                 sbindir,
                 &project.outputdir,
                 "admin_exe"
             ));
         }
-        results.extend(install_files!(
-            libs,
-            &dirs.libdir,
-            &project.outputdir,
-            "libs"
-        ));
-        results.extend(install_files!(
+        results.extend(get_files!(libs, &dirs.libdir, &project.outputdir, "libs"));
+        results.extend(get_files!(
             libexec,
             &dirs.libexecdir,
             &project.outputdir,
             "libexec"
         ));
-        results.extend(install_files!(
+        results.extend(get_files!(
             data,
             &dirs.datadir.join(&package_name),
             &project.projectdir,
             "data"
         ));
-        results.extend(install_files!(
+        results.extend(get_no_replace_files!(
             config,
             &dirs.sysconfdir,
             &project.projectdir,
             "config"
         ));
         if let Some(mandir) = &dirs.mandir {
-            results.extend(install_files!(man, mandir, &project.projectdir, "man"));
+            results.extend(get_files!(man, mandir, &project.projectdir, "man"));
         }
 
         if let Some(docdir) = &dirs.docdir {
-            results.extend(install_files!(
+            results.extend(get_files!(
                 docs,
                 &docdir.join(Path::new(&package_name)),
                 &project.projectdir,
@@ -169,7 +174,7 @@ impl Package {
             ));
         }
 
-        results.extend(install_files!(
+        results.extend(get_files!(
             desktop_files,
             &dirs.datarootdir.join("applications"),
             &project.projectdir,
@@ -177,7 +182,7 @@ impl Package {
         ));
 
         if system_install {
-            results.extend(install_files!(
+            results.extend(get_files!(
                 appstream_metadata,
                 &dirs.datarootdir.join("metainfo"),
                 &project.projectdir,
@@ -222,6 +227,7 @@ impl Package {
                         entry!(entry),
                         &dirs.datarootdir.join(completionsdir),
                         &project.projectdir,
+                        false,
                     )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
@@ -264,6 +270,7 @@ impl Package {
                             },
                             pam_modulesdir,
                             &project.outputdir,
+                            false,
                         )
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
@@ -271,7 +278,7 @@ impl Package {
             );
         }
 
-        results.extend(install_files!(
+        results.extend(get_files!(
             systemd_units,
             &dirs.systemd_unitsdir,
             &project.projectdir,
@@ -301,6 +308,7 @@ impl Package {
                         },
                         &dirs.datarootdir,
                         &project.projectdir,
+                        false,
                     )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
@@ -359,14 +367,14 @@ impl Package {
                             .to_lowercase()
                             .to_string();
                         let install_dir = dirs.datarootdir.join("terminfo").join(&initial);
-                        InstallTarget::new(entry, &install_dir, &project.projectdir)
+                        InstallTarget::new(entry, &install_dir, &project.projectdir, false)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
                     .context("error while iterating terminfo files")?,
             );
         }
 
-        results.extend(install_files!(
+        results.extend(get_files!(
             licenses,
             &dirs.datarootdir.join("licenses").join(&package_name),
             &project.projectdir,

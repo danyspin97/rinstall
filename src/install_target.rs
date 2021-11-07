@@ -6,15 +6,17 @@ use std::{
 use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
 use walkdir::WalkDir;
 
-use crate::install_entry::InstallEntry;
 use crate::templating::Templating;
+use crate::utils::append_destdir;
+use crate::utils::write_to_file;
 use crate::Dirs;
-use crate::{append_destdir, utils::write_to_file};
+use crate::{install_entry::InstallEntry, package_info::PackageInfo};
 
 pub struct InstallTarget {
     pub source: PathBuf,
     pub destination: PathBuf,
     pub templating: bool,
+    pub replace: bool,
 }
 
 impl InstallTarget {
@@ -22,6 +24,7 @@ impl InstallTarget {
         entry: InstallEntry,
         install_dir: &Path,
         parent_dir: &Path,
+        is_repleaceable: bool,
     ) -> Result<Self> {
         let full_source = parent_dir.join(&entry.source);
         let destination =
@@ -50,6 +53,7 @@ impl InstallTarget {
             source: full_source,
             destination,
             templating: entry.templating,
+            replace: is_repleaceable,
         })
     }
 
@@ -59,11 +63,13 @@ impl InstallTarget {
         dry_run: bool,
         package_dir: &Path,
         dirs: &Dirs,
+        pkg_info: &mut PackageInfo,
     ) -> Result<()> {
         let InstallTarget {
             source,
             destination,
             templating,
+            replace,
         } = self;
         let destination = append_destdir(&destination, &destdir);
 
@@ -104,6 +110,12 @@ impl InstallTarget {
                         format!("unable to copy file {:?} to {:?}", source, destination)
                     })?;
                 }
+                let dest_wo_destdir = if let Some(destdir) = destdir {
+                    destination.strip_prefix(destdir).unwrap()
+                } else {
+                    &destination
+                };
+                pkg_info.add_file(&destination, dest_wo_destdir, replace)?;
             }
         } else if source.is_dir() {
             WalkDir::new(&source)

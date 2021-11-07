@@ -5,6 +5,7 @@ mod install_entry;
 mod install_spec;
 mod install_target;
 mod package;
+mod package_info;
 mod project;
 mod templating;
 mod uninstall;
@@ -24,9 +25,8 @@ use dirs::Dirs;
 use install_spec::InstallSpec;
 use package::Package;
 use project::Project;
-use utils::append_destdir;
 
-use crate::utils::write_to_file;
+use crate::{package_info::PackageInfo, utils::append_destdir};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -153,45 +153,28 @@ fn main() -> Result<()> {
             root_install,
         )?;
 
-        if !disable_uninstall {
-            let pkg_info = append_destdir(
-                &dirs
-                    .localstatedir
-                    .join("rinstall")
-                    .join(format!("{}.pkg", &pkg_name)),
-                &destdir.as_deref(),
-            );
-            if dry_run {
-                println!("Would install installation data in {:?}", pkg_info);
-            } else {
-                println!("Installing installation data in {:?}", pkg_info);
-                fs::create_dir_all(pkg_info.parent().unwrap()).with_context(|| {
-                    format!("unable to create parent directory for {:?}", pkg_info)
-                })?;
-                ensure!(
-                    !pkg_info.exists(),
-                    "cannot install {} because it has already been installed",
-                    pkg_name
-                );
-                write_to_file(
-                    &pkg_info,
-                    &serde_yaml::to_string(
-                        &targets
-                            .iter()
-                            .map(|target| target.destination.to_str().unwrap().to_string())
-                            .chain(vec![pkg_info.to_str().unwrap().to_string()].into_iter())
-                            .collect::<Vec<String>>(),
-                    )
-                    .with_context(|| {
-                        format!("unable to serialize installation into {:?}", pkg_info)
-                    })?,
-                )
-                .with_context(|| format!("unable to write installation info in {:?}", pkg_info))?;
-            }
-        }
+        let mut pkg_info = PackageInfo::new(&pkg_name, &dirs);
 
         for target in targets {
-            target.install(destdir.as_deref(), dry_run, &package_dir, &dirs)?;
+            target.install(
+                destdir.as_deref(),
+                dry_run,
+                &package_dir,
+                &dirs,
+                &mut pkg_info,
+            )?;
+        }
+
+        if !disable_uninstall {
+            if dry_run {
+                println!("Would install installation data in {:?}", pkg_info.path);
+            } else {
+                println!(
+                    "Installing installation data in {:?}",
+                    append_destdir(&pkg_info.path, &destdir.as_deref())
+                );
+                pkg_info.install(destdir.as_deref())?;
+            }
         }
     }
 
