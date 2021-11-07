@@ -294,6 +294,15 @@ For documentation and examples; they will be installed in folder
 For configuration files; they will be installed in `sysconfdir` (which defaults to
 `/usr/local/etc`).
 
+#### `user_config`
+
+(_since 0.1.0_)
+
+_Only available in non-system wide installations._
+
+For configuration files that should only be installed for non-system wide installations; they will
+be installed in `sysconfdir` (which defaults to `$XDG_CONFIG_HOME/.config`).
+
 #### `desktop-files`
 
 (_since 0.1.0_)

@@ -65,6 +65,8 @@ pub struct Package {
     docs: Vec<Entry>,
     #[serde(default)]
     config: Vec<Entry>,
+    #[serde(default)]
+    user_config: Vec<Entry>,
     #[serde(default, rename(deserialize = "desktop-files"))]
     desktop_files: Vec<Entry>,
     #[serde(default, rename(deserialize = "appstream-metadata"))]
@@ -161,6 +163,14 @@ impl Package {
             &project.projectdir,
             "config"
         ));
+        if !system_install {
+            results.extend(get_no_replace_files!(
+                user_config,
+                &dirs.sysconfdir,
+                &project.projectdir,
+                "user_config"
+            ));
+        }
         if let Some(mandir) = &dirs.mandir {
             results.extend(get_files!(man, mandir, &project.projectdir, "man"));
         }
