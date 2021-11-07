@@ -220,6 +220,9 @@ dst: internaldir/
 
 **rinstall** allows for the following keys:
 
+_Note_: ***each entry will be available for both system and non-system wide installations except
+were expliticly noted***.
+
 #### Type
 
 (_since 0.1.0_)
