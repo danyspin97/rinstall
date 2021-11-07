@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use color_eyre::eyre::{ensure, Context, Result};
+use color_eyre::eyre::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::{

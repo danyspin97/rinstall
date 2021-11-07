@@ -73,7 +73,7 @@ impl InstallTarget {
             templating,
             replace,
         } = &self;
-        let destination = append_destdir(&destination, &destdir);
+        let destination = append_destdir(destination, &destdir);
 
         ensure!(source.exists(), "{:?} does not exist", source);
 
@@ -90,7 +90,7 @@ impl InstallTarget {
             // destdir conflicts with force and update-config
             if destdir.is_none()
                 && self.handle_existing_files(
-                    &source,
+                    source,
                     &destination,
                     package_dir,
                     dry_run,
@@ -107,7 +107,7 @@ impl InstallTarget {
                 } else {
                     "Installing"
                 },
-                source.strip_prefix(&package_dir).unwrap_or(&source),
+                source.strip_prefix(&package_dir).unwrap_or(source),
                 destination
             );
             if !dry_run {
@@ -115,7 +115,7 @@ impl InstallTarget {
                     format!("unable to create directory {:?}", destination.parent())
                 })?;
                 if *templating {
-                    let mut templating = Templating::new(&source)?;
+                    let mut templating = Templating::new(source)?;
                     templating
                         .apply(dirs)
                         .with_context(|| format!("unable to apply templating to {:?}", source))?;
@@ -220,18 +220,16 @@ impl InstallTarget {
                         destination
                     );
                 }
+            } else if dry_run {
+                eprintln!(
+                    "WARNING: file {:?} already exists, it would be overwritten",
+                    destination
+                );
             } else {
-                if dry_run {
-                    eprintln!(
-                        "WARNING: file {:?} already exists, it would be overwritten",
-                        destination
-                    );
-                } else {
-                    eprintln!(
-                        "WARNING: file {:?} already exists, overwriting it",
-                        destination
-                    );
-                }
+                eprintln!(
+                    "WARNING: file {:?} already exists, overwriting it",
+                    destination
+                );
             }
         }
         if destination.exists() && !self.replace {
@@ -245,7 +243,7 @@ impl InstallTarget {
                 println!(
                     "{} config {:?} -> {:?}",
                     if dry_run { "Would skip" } else { "Skipping" },
-                    source.strip_prefix(&package_dir).unwrap_or(&source),
+                    source.strip_prefix(&package_dir).unwrap_or(source),
                     destination
                 );
                 // Skip installation
