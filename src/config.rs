@@ -6,7 +6,7 @@ use xdg::BaseDirectories;
 use crate::uninstall::Uninstall;
 
 #[derive(Parser, Deserialize)]
-#[clap(version = "0.1", author = "Danilo Spinella <oss@danyspin97.org>")]
+#[clap(version = "0.1.0", author = "Danilo Spinella <oss@danyspin97.org>")]
 pub struct Config {
     #[serde(skip_deserializing)]
     #[clap(short, long, about = "Path to the rinstall.yml configuration")]
