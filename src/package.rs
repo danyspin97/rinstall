@@ -67,7 +67,7 @@ pub struct Package {
     docs: Vec<Entry>,
     #[serde(default)]
     config: Vec<Entry>,
-    #[serde(default)]
+    #[serde(default, rename(deserialize = "user-config"))]
     user_config: Vec<Entry>,
     #[serde(default, rename(deserialize = "desktop-files"))]
     desktop_files: Vec<Entry>,
@@ -180,7 +180,7 @@ impl Package {
                 user_config,
                 &dirs.sysconfdir,
                 &project.projectdir,
-                "user_config"
+                "user-config"
             ));
         }
         if let Some(mandir) = &dirs.mandir {

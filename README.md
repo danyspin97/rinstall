@@ -331,7 +331,7 @@ For documentation and examples; they will be installed in folder
 For configuration files; they will be installed in `sysconfdir` (which defaults to
 `/usr/local/etc`).
 
-#### `user_config`
+#### `user-config`
 
 (_since 0.1.0_)
 
