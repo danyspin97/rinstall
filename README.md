@@ -59,7 +59,7 @@ Run rinstall as your user to see the changes that will be done to the filesystem
 $ rinstall
 ```
 
-After having reviewd the changes, add `-y` or `--yes` to perform an user installation:
+After having reviewed the changes, add `-y` or `--yes` to perform an user installation:
 
 ```
 $ rinstall -y
