@@ -174,20 +174,46 @@ To support **rinstall**, place an `install.yml` file into the root of your proje
 the rinstall version to use and the packages to install. Each package shall contain the
 entries of the files to install, divided by their purpose/destination.
 
-Example file for a program named `foo` that only install an executable with the same name:
+Example file for a program named `foo` written in Rust that only install an executable with
+the same name:
 
 ```yaml
 rinstall: 0.1.0
-foo:
-  exe:
-    - foo
+pkgs:
+  foo:
+    type: rust
+    exe:
+      - foo
 ```
 
 ### rinstall version
 
-each rinstall release will have a respective version of the spec file; each version might support
-new entry types but it might remove support for some as well. rinstall will support older
+each **rinstall** release will have a respective version of the spec file; each version might
+support new entry types but it might remove support for some as well. rinstall will support older
 releases, along with all its entry types which were allowed.
+
+### Packages
+
+**rinstall** support the installation of multiple packages from the same repository. Put all the
+packages under a unique name inside the key `pkgs` in the `install.yml` file (even if there is only
+one package):
+
+```yaml
+rinstall: 0.1.0
+pkgs:
+  foo:
+    type: rust
+    exe:
+      - foo
+  bar:
+    type: rust
+    exe:
+      - bar
+  bar-c:
+    type: custom
+    include:
+      - bar.h
+```
 
 ### Entries
 Each entry list a file to install and it shall either be a string or a struct containing the
