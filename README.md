@@ -443,10 +443,12 @@ look at the [Directory Layout] of the freedesktop icon theme specification.
 (_since 0.1.0_)
 
 For terminfo sources; they will be installed in `@datarootdir@/terminfo`
-(`/usr/local/share/terminfo` by default).
-
-_Note_: The source files won't be compiled by **rinstall**. Please compile them manually after
-installation by using `tic`.
+(`/usr/local/share/terminfo` by default). The source files won't be compiled by **rinstall**.
+Please compile them manually after installation by using `tic`.
+The files there are divided into different folders based on the first letter of the file name.
+For example the file `alacritty.info` should be installed in
+`/usr/local/share/terminfo/a/alacritty.info`. Just use the name of the file in `src` or `dst`
+and **rinstall** will handle the directory.
 
 #### `licenses`
 
