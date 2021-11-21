@@ -58,6 +58,8 @@ pub struct Package {
     #[serde(default)]
     libexec: Vec<Entry>,
     #[serde(default)]
+    includes: Vec<Entry>,
+    #[serde(default)]
     man: Vec<Entry>,
     #[serde(default)]
     data: Vec<Entry>,
@@ -83,6 +85,8 @@ pub struct Package {
     terminfo: Vec<Entry>,
     #[serde(default)]
     licenses: Vec<Entry>,
+    #[serde(default, rename(deserialize = "pkg-config"))]
+    pkg_config: Vec<Entry>,
 }
 
 macro_rules! entry {
@@ -151,6 +155,14 @@ impl Package {
             &project.outputdir,
             "libexec"
         ));
+        if let Some(includedir) = &dirs.includedir {
+            results.extend(get_files!(
+                includes,
+                includedir,
+                &project.projectdir,
+                "includes"
+            ));
+        }
         results.extend(get_files!(
             data,
             &dirs.datadir.join(&package_name),
@@ -431,6 +443,15 @@ impl Package {
             "licenses"
         ));
 
+        if system_install {
+            results.extend(get_files!(
+                pkg_config,
+                &dirs.libdir.join("pkgconfig"),
+                &project.projectdir,
+                "pkg-config"
+            ));
+        }
+
         Ok(results)
     }
 
@@ -459,6 +480,7 @@ impl Package {
         check_version!(rinstall_version, "admin_exe", admin_exe, ">=0.1.0");
         check_version!(rinstall_version, "libs", libs, ">=0.1.0");
         check_version!(rinstall_version, "libexec", libexec, ">=0.1.0");
+        check_version!(rinstall_version, "includes", includes, ">=0.1.0");
         check_version!(rinstall_version, "man", man, ">=0.1.0");
         check_version!(rinstall_version, "data", data, ">=0.1.0");
         check_version!(rinstall_version, "docs", docs, ">=0.1.0");
@@ -493,6 +515,7 @@ impl Package {
         check_version!(rinstall_version, "icons", icons, ">=0.1.0");
         check_version!(rinstall_version, "terminfo", terminfo, ">=0.1.0");
         check_version!(rinstall_version, "licenses", licenses, ">=0.1.0");
+        check_version!(rinstall_version, "pkg-config", pkg_config, ">=0.1.0");
 
         Ok(())
     }

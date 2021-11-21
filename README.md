@@ -292,6 +292,14 @@ _Only available in system-wide installation._
 
 `libexec` files will be installed in `libexecdir` (which defaults to `/usr/local/libexec`).
 
+#### `include`
+
+(_since 0.1.0_)
+
+_Only available in system-wide installation._
+
+`include` files will be installed in `includedir` (which defaults to `/usr/local/include`).
+
 #### `man`
 
 (_since 0.1.0_)
@@ -446,6 +454,15 @@ installation by using `tic`.
 
 For licenses; they will be installed in `@datarootdir@/licenses/<pkg-name>`
 (`/usr/local/share/licenses/<pkg-name>` by default).
+
+#### `pkg-config`
+
+(_since 0.1.0_)
+
+_Only available in system-wide installation._
+
+For `pkg-config` files; they will be installed in `@libdir@/pkgconfig`
+(`/usr/local/lib/pkgconfig` by default).
 
 ### Templating
 
