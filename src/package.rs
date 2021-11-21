@@ -485,6 +485,7 @@ impl Package {
         check_version!(rinstall_version, "data", data, ">=0.1.0");
         check_version!(rinstall_version, "docs", docs, ">=0.1.0");
         check_version!(rinstall_version, "config", config, ">=0.1.0");
+        check_version!(rinstall_version, "user-config", user_config, ">=0.1.0");
         check_version!(rinstall_version, "desktop_files", desktop_files, ">=0.1.0");
         check_version!(
             rinstall_version,
