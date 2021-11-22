@@ -8,9 +8,12 @@ rinstall is an helper tool that installs software and additional data into the s
 Many programs often include man pages, documentation, config files and there is no standard
 way to install them except for using Makefiles. However, Makefiles are notoriously complicated to
 setup; it is especially hard to follow the [Directory Variables] from the _GNU Coding
-Standard_ ([link][Makefiles Best Practices]).
+Standard_.).
 
 [Directory Variables]: https://www.gnu.org/prep/standards/html_node/Directory-Variables.html
+
+[This][Makefiles Best Practices] is rinstall rationale.
+
 [Makefiles Best Practices]: https://danyspin97.org/blog/makefiles-best-practices/
 
 rinstall read a declarative YAML file (`install.yml`) containing the list of the files to install.
