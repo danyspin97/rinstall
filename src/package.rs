@@ -223,12 +223,15 @@ impl Package {
                             .to_str()
                             .with_context(|| format!("unable to convert {:?} to string", name))?
                             .to_string();
-                        ensure!(man_cat.chars().next().unwrap().is_ascii_digit(), "the last");
+                        ensure!(
+                            man_cat.chars().next().unwrap().is_ascii_digit(),
+                            "the last character should be a digit from 1 to 8"
+                        );
                         let install_dir = mandir.join(format!("man{}", &man_cat));
                         InstallTarget::new(entry, &install_dir, &project.projectdir, true)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
-                    .context("error while iterating terminfo files")?,
+                    .context("error while iterating man pages")?,
             );
         }
 
