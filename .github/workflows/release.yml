@@ -30,8 +30,9 @@ jobs:
       - name: Create tarball
         run: |
             touch .tarball
+            cp target/${{ matrix.target }}/release/rinstall rinstall
             tar -cvf rinstall-${{ matrix.target }}.tar.zst \
-                target/${{ matrix.target }}/release/rinstall \
+                rinstall \
                 README.md \
                 LICENSE.md \
                 install.yml \
