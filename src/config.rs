@@ -148,7 +148,7 @@ impl Config {
             datarootdir: Some("@XDG_DATA_HOME@".to_string()),
             datadir: Some("@XDG_DATA_HOME@".to_string()),
             sysconfdir: Some("@XDG_CONFIG_HOME@".to_string()),
-            localstatedir: Some("@XDG_STATE_HOME@".to_string()),
+            localstatedir: Some("@XDG_DATA_HOME@".to_string()),
             runstatedir: Some("@XDG_RUNTIME_DIR@".to_string()),
             includedir: None,
             docdir: None,
