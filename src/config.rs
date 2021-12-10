@@ -238,7 +238,7 @@ impl Config {
         replace!(datarootdir, "@XDG_DATA_HOME@", xdg.get_data_home());
         replace!(datadir, "@XDG_DATA_HOME@", xdg.get_data_home());
         replace!(sysconfdir, "@XDG_CONFIG_HOME@", xdg.get_config_home());
-        replace!(localstatedir, "@XDG_STATE_HOME@", xdg.get_state_home());
+        replace!(localstatedir, "@XDG_DATA_HOME@", xdg.get_data_home());
         let runtime_directory = xdg
             .get_runtime_directory()
             .context("insecure XDG_RUNTIME_DIR found")?;
