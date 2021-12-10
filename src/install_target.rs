@@ -117,7 +117,7 @@ impl InstallTarget {
         ensure!(source.exists(), "{:?} does not exist", source);
 
         if source.is_file() {
-            let destination = if destination.as_os_str().to_str().unwrap().ends_with('/') {
+            let destination = if path_to_str!(destination).ends_with('/') {
                 destination.join(
                     source
                         .file_name()
