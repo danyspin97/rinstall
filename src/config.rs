@@ -94,6 +94,8 @@ pub struct Config {
 #[derive(Parser, Clone)]
 pub enum SubCommand {
     Uninstall(Uninstall),
+    #[clap(name = "rpm-files")]
+    GenerateRpmFiles,
 }
 
 impl Config {

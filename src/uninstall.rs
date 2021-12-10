@@ -22,7 +22,7 @@ pub struct Uninstall {
 
 impl Uninstall {
     pub fn run(
-        self,
+        &self,
         localstatedir: &Path,
         dry_run: bool,
     ) -> Result<()> {

@@ -12,6 +12,7 @@ mod uninstall;
 mod utils;
 
 use std::{
+    collections::HashSet,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -97,11 +98,17 @@ fn main() -> Result<()> {
 
     let dirs = Dirs::new(config).context("unable to create dirs")?;
 
-    if let Some(subcmd) = subcmd {
+    if let Some(subcmd) = &subcmd {
         match subcmd {
             SubCommand::Uninstall(uninstall) => {
                 uninstall.run(Path::new(&dirs.localstatedir), dry_run)?;
                 return Ok(());
+            }
+            SubCommand::GenerateRpmFiles => {
+                ensure!(
+                    root_install,
+                    "rpm-files can only be used for system wide installations"
+                );
             }
         }
     }
@@ -142,9 +149,10 @@ fn main() -> Result<()> {
     // directory containing the source code
     let is_release_tarball = package_dir.join(".tarball").exists();
 
+    let mut rpm_files = Vec::new();
+
     for package in packages {
         let pkg_name = package.name.clone().unwrap();
-        println!(">>> Package {}", pkg_name);
 
         let project_type = package.project_type.clone();
 
@@ -154,6 +162,19 @@ fn main() -> Result<()> {
             &install_spec.version,
             root_install,
         )?;
+        if let Some(subcmd) = &subcmd {
+            match subcmd {
+                SubCommand::Uninstall(_) => {}
+                SubCommand::GenerateRpmFiles => {
+                    for target in targets {
+                        rpm_files.append(&mut target.generate_rpm_files()?);
+                    }
+                    continue;
+                }
+            }
+        }
+
+        println!(">>> Package {}", pkg_name);
 
         let mut pkg_info = PackageInfo::new(&pkg_name, &dirs);
         let pkg_info_path = append_destdir(&pkg_info.path, &destdir.as_deref());
@@ -181,6 +202,56 @@ fn main() -> Result<()> {
             } else {
                 println!("Installing installation data in {:?}", pkg_info_path);
                 pkg_info.install(destdir.as_deref())?;
+            }
+        }
+    }
+
+    if let Some(subcmd) = &subcmd {
+        match subcmd {
+            SubCommand::Uninstall(_) => {}
+            SubCommand::GenerateRpmFiles => {
+                let mut res = String::new();
+                let mut owned_dir = HashSet::new();
+                owned_dir.insert(dirs.bindir.clone());
+                owned_dir.insert(dirs.datadir.clone());
+                owned_dir.insert(dirs.datarootdir.clone());
+                // unwrapping here is safe, because GenerateRpmFiles requires --system
+                owned_dir.insert(dirs.docdir.unwrap().clone());
+                owned_dir.insert(dirs.includedir.unwrap().clone());
+                owned_dir.insert(dirs.libdir.clone());
+                owned_dir.insert(dirs.libexecdir.clone());
+                owned_dir.insert(dirs.localstatedir.clone());
+                owned_dir.insert(dirs.mandir.unwrap().clone());
+                owned_dir.insert(dirs.pam_modulesdir.unwrap().clone());
+                owned_dir.insert(dirs.sbindir.unwrap().clone());
+                owned_dir.insert(dirs.sysconfdir.clone());
+                owned_dir.insert(dirs.systemd_unitsdir.clone());
+                owned_dir.insert(dirs.datarootdir.join("licenses"));
+                owned_dir.insert(dirs.datarootdir.join("applications"));
+                owned_dir.insert(dirs.datarootdir.join("zsh").join("site-functions"));
+                owned_dir.insert(dirs.datarootdir.join("bash-completion").join("completions"));
+
+                for file in rpm_files {
+                    let mut parent_dirs = Vec::new();
+                    let mut parent = file.parent().unwrap();
+                    loop {
+                        if owned_dir.contains(parent) {
+                            break;
+                        }
+                        owned_dir.insert(parent.to_path_buf());
+                        parent_dirs.push(parent);
+                        parent = parent.parent().unwrap();
+                    }
+                    for dir in parent_dirs.iter().rev() {
+                        res.push_str("%dir ");
+                        res.push_str(dir.to_str().unwrap());
+                        res.push('\n');
+                    }
+                    res.push_str(file.to_str().unwrap());
+                    res.push('\n');
+                }
+
+                println!("{}", res);
             }
         }
     }

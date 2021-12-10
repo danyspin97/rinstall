@@ -57,6 +57,36 @@ impl InstallTarget {
         })
     }
 
+    pub fn generate_rpm_files(&self) -> Result<Vec<PathBuf>> {
+        ensure!(self.source.exists(), "{:?} does not exist", self.source);
+        Ok(if self.source.is_file() {
+            vec![self.destination.clone()]
+        } else {
+            let mut res = Vec::new();
+            WalkDir::new(&self.source)
+                .into_iter()
+                .try_for_each(|entry| -> Result<()> {
+                    let entry = entry?;
+                    if !entry.file_type().is_file() {
+                        return Ok(());
+                    }
+
+                    let full_path = entry.path();
+                    let relative_path =
+                        full_path.strip_prefix(&self.source).with_context(|| {
+                            format!(
+                                "unable to strip prefix {:?} from {:?}",
+                                self.source, full_path
+                            )
+                        })?;
+                    res.push(self.destination.join(relative_path));
+
+                    Ok(())
+                })?;
+            res
+        })
+    }
+
     pub fn install(
         self,
         destdir: Option<&str>,
