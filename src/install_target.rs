@@ -4,6 +4,7 @@ use std::{
 };
 
 use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
+use colored::Colorize;
 use walkdir::WalkDir;
 
 use crate::templating::Templating;
@@ -11,6 +12,14 @@ use crate::utils::append_destdir;
 use crate::utils::write_to_file;
 use crate::Dirs;
 use crate::{install_entry::InstallEntry, package_info::PackageInfo};
+
+macro_rules! path_to_str {
+    ($path:expr) => {
+        $path
+            .to_str()
+            .with_context(|| format!("unable to convert {:?} to string", $path))?
+    };
+}
 
 pub struct InstallTarget {
     pub source: PathBuf,
@@ -131,14 +140,17 @@ impl InstallTarget {
                 return Ok(());
             }
             println!(
-                "{} {:?} -> {:?}",
+                "{} {} {} {}",
                 if dry_run {
                     "Would install:"
                 } else {
                     "Installing"
                 },
-                source.strip_prefix(&package_dir).unwrap_or(source),
-                destination
+                path_to_str!(source.strip_prefix(&package_dir).unwrap_or(source))
+                    .yellow()
+                    .bold(),
+                "->".purple(),
+                path_to_str!(destination).cyan().bold()
             );
             if !dry_run {
                 fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
@@ -191,14 +203,17 @@ impl InstallTarget {
                         return Ok(());
                     }
                     println!(
-                        "{} {:?} -> {:?}",
+                        "{} {} {} {}",
                         if dry_run {
                             "Would install:"
                         } else {
                             "Installing"
                         },
-                        source.strip_prefix(&package_dir).unwrap_or(&source),
-                        destination
+                        path_to_str!(source.strip_prefix(&package_dir).unwrap_or(&source))
+                            .yellow()
+                            .bold(),
+                        "->".purple(),
+                        path_to_str!(destination).cyan().bold()
                     );
                     if dry_run {
                         return Ok(());
@@ -241,8 +256,10 @@ impl InstallTarget {
             if !force {
                 if dry_run {
                     eprintln!(
-                        "WARNING: file {:?} already exists, add --force to overwrite it",
-                        destination
+                        "{} file {} already exists, add {} to overwrite it",
+                        "WARNING:".red().italic(),
+                        path_to_str!(destination).yellow().bold(),
+                        "--force".bright_black().italic(),
                     );
                 } else {
                     bail!(
@@ -252,29 +269,42 @@ impl InstallTarget {
                 }
             } else if dry_run {
                 eprintln!(
-                    "WARNING: file {:?} already exists, it would be overwritten",
-                    destination
+                    "{} file {} already exists, it would be overwritten",
+                    "WARNING:".red().italic(),
+                    path_to_str!(destination).yellow().bold()
                 );
             } else {
                 eprintln!(
-                    "WARNING: file {:?} already exists, overwriting it",
-                    destination
+                    "{} file {} already exists, overwriting it",
+                    "WARNING:".red().italic(),
+                    path_to_str!(destination)
                 );
             }
         }
         if destination.exists() && !self.replace {
             if update_config {
                 if dry_run {
-                    eprintln!("WARNING: config {:?} will be overwritten", destination);
+                    eprintln!(
+                        "{} config {} will be overwritten",
+                        "WARNING:".red().italic(),
+                        path_to_str!(destination)
+                    );
                 } else {
-                    eprintln!("WARNING: config {:?} is being overwritten", destination);
+                    eprintln!(
+                        "{} config {} is being overwritten",
+                        "WARNING:".red().italic(),
+                        path_to_str!(destination)
+                    );
                 }
             } else {
                 println!(
-                    "{} config {:?} -> {:?}",
+                    "{} config {} {} {}",
                     if dry_run { "Would skip" } else { "Skipping" },
-                    source.strip_prefix(&package_dir).unwrap_or(source),
-                    destination
+                    path_to_str!(source.strip_prefix(&package_dir).unwrap_or(source))
+                        .yellow()
+                        .bold(),
+                    "->".purple(),
+                    path_to_str!(destination).cyan().bold()
                 );
                 // Skip installation
                 return Ok(true);

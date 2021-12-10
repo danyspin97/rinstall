@@ -18,7 +18,8 @@ use std::{
 };
 
 use clap::Parser;
-use color_eyre::eyre::{bail, ensure, Context, Result};
+use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
+use colored::*;
 use xdg::BaseDirectories;
 
 use config::{Config, SubCommand};
@@ -174,7 +175,12 @@ fn main() -> Result<()> {
             }
         }
 
-        println!(">>> Package {}", pkg_name);
+        println!(
+            "{} {} {}",
+            ">>>".magenta(),
+            "Package".bright_black(),
+            pkg_name.italic().blue()
+        );
 
         let mut pkg_info = PackageInfo::new(&pkg_name, &dirs);
         let pkg_info_path = append_destdir(&pkg_info.path, &destdir.as_deref());
@@ -198,9 +204,30 @@ fn main() -> Result<()> {
 
         if !disable_uninstall {
             if dry_run {
-                println!("Would install installation data in {:?}", pkg_info.path);
+                println!(
+                    "Would install installation data in {}",
+                    pkg_info
+                        .path
+                        .to_str()
+                        .with_context(|| format!(
+                            "unable to convert {:?} to string",
+                            pkg_info.path
+                        ))?
+                        .cyan()
+                        .bold()
+                );
             } else {
-                println!("Installing installation data in {:?}", pkg_info_path);
+                println!(
+                    "Installing installation data in {}",
+                    pkg_info_path
+                        .to_str()
+                        .with_context(|| format!(
+                            "unable to convert {:?} to string",
+                            pkg_info_path
+                        ))?
+                        .cyan()
+                        .bold()
+                );
                 pkg_info.install(destdir.as_deref())?;
             }
         }
