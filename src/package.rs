@@ -248,7 +248,7 @@ impl Package {
             desktop_files,
             &dirs.datarootdir.join("applications"),
             &project.projectdir,
-            "desktop"
+            "desktop-files"
         ));
 
         if system_install {
@@ -256,7 +256,7 @@ impl Package {
                 appstream_metadata,
                 &dirs.datarootdir.join("metainfo"),
                 &project.projectdir,
-                "appstream_metadata"
+                "appstream-metadata"
             ));
         }
 
@@ -352,7 +352,7 @@ impl Package {
             systemd_units,
             &dirs.systemd_unitsdir,
             &project.projectdir,
-            "systemd_units"
+            "systemd-units"
         ));
 
         results.extend(
@@ -489,33 +489,33 @@ impl Package {
         check_version!(rinstall_version, "docs", docs, ">=0.1.0");
         check_version!(rinstall_version, "config", config, ">=0.1.0");
         check_version!(rinstall_version, "user-config", user_config, ">=0.1.0");
-        check_version!(rinstall_version, "desktop_files", desktop_files, ">=0.1.0");
+        check_version!(rinstall_version, "desktop-files", desktop_files, ">=0.1.0");
         check_version!(
             rinstall_version,
-            "appstream_metadata",
+            "appstream-metadata",
             appstream_metadata,
             ">=0.1.0"
         );
         check_version_expr!(
             rinstall_version,
-            "pam_moduless",
+            "completions:bash",
             self.completions.bash,
             ">=0.1.0"
         );
         check_version_expr!(
             rinstall_version,
-            "pam_moduless",
+            "completions:fish",
             self.completions.fish,
             ">=0.1.0"
         );
         check_version_expr!(
             rinstall_version,
-            "pam_moduless",
+            "completions:zsh",
             self.completions.zsh,
             ">=0.1.0"
         );
-        check_version!(rinstall_version, "pam_modules", pam_modules, ">=0.1.0");
-        check_version!(rinstall_version, "systemd_units", systemd_units, ">=0.1.0");
+        check_version!(rinstall_version, "pam-modules", pam_modules, ">=0.1.0");
+        check_version!(rinstall_version, "systemd-units", systemd_units, ">=0.1.0");
         check_version!(rinstall_version, "icons", icons, ">=0.1.0");
         check_version!(rinstall_version, "terminfo", terminfo, ">=0.1.0");
         check_version!(rinstall_version, "licenses", licenses, ">=0.1.0");
