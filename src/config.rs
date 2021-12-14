@@ -87,6 +87,12 @@ pub struct Config {
     #[clap(long)]
     pub systemd_unitsdir: Option<String>,
     #[serde(skip_deserializing)]
+    #[clap(
+        long,
+        about = "Use the generated binaries and libraries from the debug profile (only effective for rust projects)"
+    )]
+    pub rust_debug_target: bool,
+    #[serde(skip_deserializing)]
     #[clap(subcommand)]
     pub subcmd: Option<SubCommand>,
 }
@@ -126,6 +132,7 @@ impl Config {
             mandir: Some("@datarootdir@/man".to_string()),
             pam_modulesdir: Some("@libdir@/security".to_string()),
             systemd_unitsdir: Some("@libdir@/systemd/system".to_string()),
+            rust_debug_target: false,
             subcmd: None,
         }
     }
@@ -157,6 +164,7 @@ impl Config {
             mandir: None,
             pam_modulesdir: None,
             systemd_unitsdir: Some("@sysconfdir@/systemd/user".to_string()),
+            rust_debug_target: false,
             subcmd: None,
         }
     }

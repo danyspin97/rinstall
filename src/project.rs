@@ -22,13 +22,14 @@ impl Project {
         project_type: Type,
         projectdir: PathBuf,
         is_release_tarball: bool,
+        rust_debug_target: bool,
     ) -> Result<Self> {
         Ok(Self {
             outputdir: if is_release_tarball {
                 projectdir.clone()
             } else {
                 match project_type {
-                    Type::Rust => get_target_dir_for_rust(&projectdir)?,
+                    Type::Rust => get_target_dir_for_rust(&projectdir, rust_debug_target)?,
                     Type::Custom => projectdir.clone(),
                 }
             },
@@ -37,7 +38,10 @@ impl Project {
     }
 }
 
-fn get_target_dir_for_rust(projectdir: &Path) -> Result<PathBuf> {
+fn get_target_dir_for_rust(
+    projectdir: &Path,
+    rust_debug_target: bool,
+) -> Result<PathBuf> {
     Ok(PathBuf::from({
         // if target directory does not exist, try reading the "target_directory"
         // from cargo metadata
@@ -77,5 +81,9 @@ fn get_target_dir_for_rust(projectdir: &Path) -> Result<PathBuf> {
                 .to_string()
         }
     })
-    .join("release"))
+    .join(if rust_debug_target {
+        "debug"
+    } else {
+        "release"
+    }))
 }

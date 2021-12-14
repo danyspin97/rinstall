@@ -51,6 +51,7 @@ fn main() -> Result<()> {
         opts.system
     };
     let disable_uninstall = opts.disable_uninstall;
+    let rust_debug_target = opts.rust_debug_target;
 
     let mut config = if root_install {
         Config::new_default_root()
@@ -159,7 +160,12 @@ fn main() -> Result<()> {
 
         let targets = package.targets(
             &dirs,
-            Project::new_from_type(project_type, package_dir.clone(), is_release_tarball)?,
+            Project::new_from_type(
+                project_type,
+                package_dir.clone(),
+                is_release_tarball,
+                rust_debug_target,
+            )?,
             &install_spec.version,
             root_install,
         )?;
