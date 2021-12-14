@@ -125,7 +125,7 @@ In addition, the system-wide configuration can contain the following keys:
 - `includedir`
 - `docdir`
 - `mandir`
-- `pam-modulesdir`
+- `pam_modulesdir`
 
 Please refer to the [Directory Variables] for their usage.
 
@@ -388,7 +388,7 @@ completions:
     - _cp
 ```
 
-#### `pam_modulesdir`
+#### `pam-modules`
 
 (_since 0.1.0_)
 
@@ -398,7 +398,7 @@ For PAM modules; they will be installed in `@libdir@/security` (`/usr/local/lib/
 by default). If only `src` is provided, and the name of the file starts with `lib`, e.g.
 `libpam_mymodule.so`, it will be automatically converted to `pam_mymodule.so`.
 
-#### `systemd_units`
+#### `systemd-units`
 
 (_since 0.1.0_)
 
