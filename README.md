@@ -338,10 +338,10 @@ For configuration files; they will be installed in `sysconfdir` (which defaults 
 
 (_since 0.1.0_)
 
-_Only available in non-system wide installations._
-
 For configuration files that should only be installed for non-system wide installations; they will
-be installed in `sysconfdir` (which defaults to `$XDG_CONFIG_HOME/.config`).
+be installed in `sysconfdir` (which defaults to `$XDG_CONFIG_HOME/.config`). For system-wide
+installations, these files will be treated as documentation and installed in
+`datarootdir/<pkg-name>/user-config` (which defaults to `/usr/local/share/docs/<pkg-name>/user-config`).
 
 #### `desktop-files`
 

@@ -177,14 +177,7 @@ impl Package {
             &project.projectdir,
             "config"
         ));
-        if !system_install {
-            results.extend(get_no_replace_files!(
-                user_config,
-                &dirs.sysconfdir,
-                &project.projectdir,
-                "user-config"
-            ));
-        }
+
         if let Some(mandir) = &dirs.mandir {
             results.extend(
                 self.man
@@ -237,12 +230,21 @@ impl Package {
             );
         }
 
-        if let Some(docdir) = &dirs.docdir {
+        if system_install {
+            let pkg_docs = &dirs.docdir.as_ref().unwrap().join(Path::new(&package_name));
+            results.extend(get_files!(docs, &pkg_docs, &project.projectdir, "docs"));
             results.extend(get_files!(
-                docs,
-                &docdir.join(Path::new(&package_name)),
+                user_config,
+                &pkg_docs.join("user-config"),
                 &project.projectdir,
-                "docs"
+                "user-config"
+            ));
+        } else {
+            results.extend(get_no_replace_files!(
+                user_config,
+                &dirs.sysconfdir,
+                &project.projectdir,
+                "user-config"
             ));
         }
 
