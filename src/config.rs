@@ -131,7 +131,7 @@ impl Config {
             docdir: Some("@datarootdir@/doc".to_string()),
             mandir: Some("@datarootdir@/man".to_string()),
             pam_modulesdir: Some("@libdir@/security".to_string()),
-            systemd_unitsdir: Some("@libdir@/systemd/system".to_string()),
+            systemd_unitsdir: Some("@libdir@/systemd".to_string()),
             rust_debug_target: false,
             subcmd: None,
         }
@@ -163,7 +163,7 @@ impl Config {
             docdir: None,
             mandir: None,
             pam_modulesdir: None,
-            systemd_unitsdir: Some("@sysconfdir@/systemd/user".to_string()),
+            systemd_unitsdir: Some("@sysconfdir@/systemd".to_string()),
             rust_debug_target: false,
             subcmd: None,
         }

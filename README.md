@@ -402,7 +402,14 @@ by default). If only `src` is provided, and the name of the file starts with `li
 
 (_since 0.1.0_)
 
-For systemd units; they will be installed in `@libdir@/systemd/system` (`/usr/local/lib/systemd/system` by default).
+_Only available in system-wide installation._
+
+For systemd system units; they will be installed in `@systemd_unitsdir@/system` (`/usr/local/lib/systemd/system` by default).
+#### `systemd-units`
+
+(_since 0.2.0_)
+
+For systemd user units; they will be installed in `@systemd_unitsdir@/user` (`/usr/local/lib/systemd/user` by default).
 
 #### `icons`
 

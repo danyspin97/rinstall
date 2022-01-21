@@ -79,6 +79,8 @@ pub struct Package {
     pam_modules: Vec<Entry>,
     #[serde(default, rename(deserialize = "systemd-units"))]
     systemd_units: Vec<Entry>,
+    #[serde(default, rename(deserialize = "systemd-user-units"))]
+    systemd_user_units: Vec<Entry>,
     #[serde(default)]
     icons: Vec<IconEntry>,
     #[serde(default)]
@@ -348,11 +350,19 @@ impl Package {
             );
         }
 
+        if system_install {
+            results.extend(get_files!(
+                systemd_units,
+                &dirs.systemd_unitsdir.join("system"),
+                &project.projectdir,
+                "systemd-units"
+            ));
+        }
         results.extend(get_files!(
-            systemd_units,
-            &dirs.systemd_unitsdir,
+            systemd_user_units,
+            &dirs.systemd_unitsdir.join("user"),
             &project.projectdir,
-            "systemd-units"
+            "systemd-user-units"
         ));
 
         results.extend(
