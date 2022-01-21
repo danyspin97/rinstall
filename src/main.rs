@@ -190,8 +190,9 @@ fn main() -> Result<()> {
 
         let mut pkg_info = PackageInfo::new(&pkg_name, &dirs);
         let pkg_info_path = append_destdir(&pkg_info.path, &destdir.as_deref());
+        let pkg_already_installed = pkg_info_path.exists();
         ensure!(
-            dry_run || !pkg_info_path.exists(),
+            dry_run || !pkg_already_installed,
             "cannot install {} because it has already been installed",
             pkg_info.pkg_name
         );
@@ -205,6 +206,7 @@ fn main() -> Result<()> {
                 &package_dir,
                 &dirs,
                 &mut pkg_info,
+                pkg_already_installed,
             )?;
         }
 

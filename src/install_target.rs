@@ -105,6 +105,7 @@ impl InstallTarget {
         package_dir: &Path,
         dirs: &Dirs,
         pkg_info: &mut PackageInfo,
+        pkg_already_installed: bool,
     ) -> Result<()> {
         let InstallTarget {
             source,
@@ -135,6 +136,7 @@ impl InstallTarget {
                     dry_run,
                     force,
                     update_config,
+                    pkg_already_installed,
                 )?
             {
                 return Ok(());
@@ -198,6 +200,7 @@ impl InstallTarget {
                             dry_run,
                             force,
                             update_config,
+                            pkg_already_installed,
                         )?
                     {
                         return Ok(());
@@ -251,16 +254,19 @@ impl InstallTarget {
         dry_run: bool,
         force: bool,
         update_config: bool,
+        pkg_already_installed: bool,
     ) -> Result<bool> {
         if destination.exists() && self.replace {
             if !force {
                 if dry_run {
-                    eprintln!(
-                        "{} file {} already exists, add {} to overwrite it",
-                        "WARNING:".red().italic(),
-                        path_to_str!(destination).yellow().bold(),
-                        "--force".bright_black().italic(),
-                    );
+                    if !pkg_already_installed {
+                        eprintln!(
+                            "{} file {} already exists, add {} to overwrite it",
+                            "WARNING:".red().italic(),
+                            path_to_str!(destination).yellow().bold(),
+                            "--force".bright_black().italic(),
+                        );
+                    }
                 } else {
                     bail!(
                         "file {:?} already exists, add --force to overwrite it",
@@ -284,11 +290,13 @@ impl InstallTarget {
         if destination.exists() && !self.replace {
             if update_config {
                 if dry_run {
-                    eprintln!(
-                        "{} config {} will be overwritten",
-                        "WARNING:".red().italic(),
-                        path_to_str!(destination)
-                    );
+                    if !pkg_already_installed {
+                        eprintln!(
+                            "{} config {} will be overwritten",
+                            "WARNING:".red().italic(),
+                            path_to_str!(destination)
+                        );
+                    }
                 } else {
                     eprintln!(
                         "{} config {} is being overwritten",
