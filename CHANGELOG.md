@@ -1,3 +1,18 @@
+# 0.2.0 (unreleased)
+
+* install.yml:
+  + Add new `systemd-user-units` key
+* **Breaking changes**:
+  + Use `XDG_DATA_HOME` as `localstatedir` in non system-wide installations
+  + Use `/usr/local/lib/systemd` as systemd_unitsdir instead of
+    `/usr/local/lib/systemd/system`
+  + `user-config` will be installed as docs in system-wide installations
+* Add colored output
+* Add `rpm-files` command
+* Add new `--rust-debug-target` flag
+* Small improvements to dry mode and warnings
+* Improved README.md documentation
+
 # 0.1.1
 
 * In non system-wide installations, use XDG_DATA_HOME as localstatedir
