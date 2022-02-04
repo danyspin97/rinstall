@@ -268,110 +268,170 @@ used.
 
 #### `exe`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
 
-For the executables; they will be installed in `bindir` (which defaults to
-`/usr/local/bin`)
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$bindir` | `/usr/local/bin` |
+| *user-wide* | `$bindir` | `$HOME/.local/bin` |
+
+For the executables.
 
 #### `admin_exe`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$sbindir` | `/usr/local/sbin` |
 
 For admin executables; they will be installed in `sbindir` (which defaults to `/usr/local/sbin`).
 
 #### `libs`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
 
-For the libraries; they will be installed in `libdir` (which defaults to `/usr/local/lib`).
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$libdir` | `/usr/local/lib` |
+| *user-wide* | `$libdir` | `$HOME/.local/lib` |
+
+For the libraries.
 
 #### `libexec`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
-
-`libexec` files will be installed in `libexecdir` (which defaults to `/usr/local/libexec`).
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$libexecdir` | `/usr/local/libexec` |
 
 #### `include`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$includedir` | `/usr/local/include` |
 
-`include` files will be installed in `includedir` (which defaults to `/usr/local/include`).
+For headers.
 
 #### `man`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$mandir` | `/usr/local/share/man` |
 
-For the man pages; they will be installed under the correct folder in `mandir`
-(which defaults to `/usr/local/share/man`).
+For the man pages.
 
 #### `data`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
 
-For architecture independent files; they will be installed in `datarootdir` (which
-defaults to `/usr/local/share`).
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$datarootdir` | `/usr/local/lib` |
+| *user-wide* | `$XDG_DATA_HOME` | `$HOME/.local/share` |
+
+For architecture independent files.
 
 #### `docs`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-For documentation and examples; they will be installed in folder
-`doc/<pkg-name>` under folder `datarootdir` (which defaults to
-`/usr/local/share/doc/<pkg-name>`).
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$datarootdir/<pkg-name>` | `/usr/local/share/doc/<pkg-name>` |
+
+For documentation and examples.
 
 #### `config`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
 
-For configuration files; they will be installed in `sysconfdir` (which defaults to
-`/usr/local/etc`).
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$sysconfdir` | `/usr/local/etc` |
+| *user-wide* | `$XDG_CONFIG_HOME` | `$HOME/.config` |
+
+For configuration files.
 
 #### `user-config`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
 
-For configuration files that should only be installed for non-system wide installations; they will
-be installed in `sysconfdir` (which defaults to `$XDG_CONFIG_HOME/.config`). For system-wide
-installations, these files will be treated as documentation and installed in
-`datarootdir/<pkg-name>/user-config` (which defaults to `/usr/local/share/docs/<pkg-name>/user-config`).
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$datarootdir/<pkg-name>/user-config` | `/usr/local/share/docs/<pkg-name>/user-config` |
+| *user-wide* | `$XDG_CONFIG_HOME` | `$HOME/.config` |
+
+For configuration files that can only be used by non-root users. For system-wide
+installations, these files will be treated as documentation.
 
 #### `desktop-files`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
+
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$datarootdir/applications` | `/usr/local/share/applications` |
+| *user-wide* | `$XDG_DATA_HOME/applications` | `$HOME/.local/share/applications` |
 
 For `.desktop` files; they will be installed in folder
 `applications` under `datarootdir` (which defaults to `/usr/local/share/applications`).
 
 #### `appstream-metadata`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$datarootdir/metainfo` | `/usr/local/share/metainfo` |
 
-For [AppStream metadata] files; they will be installed in folder
-`metainfo` under `datarootdir` (which defaults to `/usr/local/share/metainfo`).
+
+For [AppStream metadata] files.
 
 [AppStream metadata]: https://www.freedesktop.org/software/appstream/docs/chap-Metadata.html
 
 #### `completions`
 
-- *bash* (_since 0.1.0_)
-- *fish* (_since 0.1.0_)
-- *zsh* (_since 0.1.0_)
+| | Version | System-wide only |
+| --- | --- | --- |
+| *bash* | _since 0.1.0_ | *no* |
+| *fish* | _since 0.1.0_ | *yes* |
+| *zsh* | _since 0.1.0_ | *yes* |
 
 For completions files; they will be installed in the respective shell completions
 directory, under `datarootdir`:
-- `bash-completion/completions` for *bash*
-- `fish/vendor_completions.d` for *fish*
-- `zsh/site-functions` for *zsh*
+- `$datarootdir/bash-completion/completions` for *bash*
+- `$datarootdir/fish/vendor_completions.d` for *fish*
+- `$datarootdir/zsh/site-functions` for *zsh*
 
 Example:
 
@@ -390,30 +450,47 @@ completions:
 
 #### `pam-modules`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$libdir/security` | `/usr/local/lib/security` |
 
-For PAM modules; they will be installed in `@libdir@/security` (`/usr/local/lib/security`
-by default). If only `src` is provided, and the name of the file starts with `lib`, e.g.
+For PAM modules. If only `src` is provided, and the name of the file starts with `lib`, e.g.
 `libpam_mymodule.so`, it will be automatically converted to `pam_mymodule.so`.
 
 #### `systemd-units`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$systemd_unitsdir/system` | `/usr/local/lib/systemd/system` |
 
-For systemd system units; they will be installed in `@systemd_unitsdir@/system` (`/usr/local/lib/systemd/system` by default).
+For systemd system units.
+
 #### `systemd-units`
 
-(_since 0.2.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
+
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$systemd_unitsdir/user` | `/usr/local/lib/systemd/user` |
+| *user-wide* | `$XDG_DATA_HOME/systemd/user` | `$HOME/.local/share/systemd/user` |
 
 For systemd user units; they will be installed in `@systemd_unitsdir@/user` (`/usr/local/lib/systemd/user` by default).
 
 #### `icons`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
 
 For icons. There two different locations for icons:
 
@@ -450,10 +527,15 @@ look at the [Directory Layout] of the freedesktop icon theme specification.
 
 #### `terminfo`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-For terminfo sources; they will be installed in `@datarootdir@/terminfo`
-(`/usr/local/share/terminfo` by default). The source files won't be compiled by **rinstall**.
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$datarootdir/terminfo` | `/usr/local/share/terminfo` |
+
+For terminfo sources. The source files won't be compiled by **rinstall**.
 Please compile them manually after installation by using `tic`.
 The files there are divided into different folders based on the first letter of the file name.
 For example the file `alacritty.info` should be installed in
@@ -462,19 +544,28 @@ and **rinstall** will handle the directory.
 
 #### `licenses`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *no* |
 
-For licenses; they will be installed in `@datarootdir@/licenses/<pkg-name>`
-(`/usr/local/share/licenses/<pkg-name>` by default).
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$datarootdir/licenses/<pkg-name>` | `/usr/local/share/licenses/<pkg-name>` |
+| *user-wide* | `$XDG_DATA_HOME/licenses/<pkg-name>` | `$HOME/.local/share/applications/<pkg-name>` |
+
+For licenses.
 
 #### `pkg-config`
 
-(_since 0.1.0_)
+| Version | System-wide only |
+| --- | --- |
+| _since 0.1.0_ | *yes* |
 
-_Only available in system-wide installation._
+| | Installed in | Defaults to |
+| --- | --- | --- |
+| *system-wide* | `$libdir/pkgconfig` | `/usr/local/lib/pkgconfig` |
 
-For `pkg-config` files; they will be installed in `@libdir@/pkgconfig`
-(`/usr/local/lib/pkgconfig` by default).
+For `pkg-config` files.
 
 ### Templating
 
