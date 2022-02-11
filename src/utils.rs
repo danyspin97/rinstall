@@ -6,6 +6,15 @@ use std::{
 
 use color_eyre::eyre::{Context, Result};
 
+#[macro_export]
+macro_rules! path_to_str {
+    ($path:expr) => {
+        $path
+            .to_str()
+            .with_context(|| format!("unable to convert {:?} to string", $path))?
+    };
+}
+
 pub fn append_destdir(
     destination: &Path,
     destdir: &Option<&str>,

@@ -7,19 +7,11 @@ use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
 use colored::Colorize;
 use walkdir::WalkDir;
 
-use crate::templating::Templating;
 use crate::utils::append_destdir;
 use crate::utils::write_to_file;
 use crate::Dirs;
 use crate::{install_entry::InstallEntry, package_info::PackageInfo};
-
-macro_rules! path_to_str {
-    ($path:expr) => {
-        $path
-            .to_str()
-            .with_context(|| format!("unable to convert {:?} to string", $path))?
-    };
-}
+use crate::{path_to_str, templating::Templating};
 
 pub struct InstallTarget {
     pub source: PathBuf,
