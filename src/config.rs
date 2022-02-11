@@ -1,5 +1,8 @@
 use clap::Parser;
-use color_eyre::eyre::{Context, ContextCompat, Result};
+use color_eyre::{
+    eyre::{Context, ContextCompat},
+    Result,
+};
 use serde::Deserialize;
 use xdg::BaseDirectories;
 

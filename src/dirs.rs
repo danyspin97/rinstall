@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use color_eyre::eyre::Result;
+use color_eyre::Result;
 
 use crate::Config;
 

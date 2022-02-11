@@ -3,7 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
+use color_eyre::{
+    eyre::{bail, ensure, Context, ContextCompat},
+    Result,
+};
 use colored::Colorize;
 use walkdir::WalkDir;
 

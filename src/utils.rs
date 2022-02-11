@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use color_eyre::eyre::{Context, Result};
+use color_eyre::{eyre::Context, Result};
 
 #[macro_export]
 macro_rules! path_to_str {

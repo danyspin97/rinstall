@@ -18,7 +18,10 @@ use std::{
 };
 
 use clap::Parser;
-use color_eyre::eyre::{bail, ensure, Context, ContextCompat, Result};
+use color_eyre::{
+    eyre::{bail, ensure, Context, ContextCompat},
+    Result,
+};
 use colored::*;
 use xdg::BaseDirectories;
 

@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use color_eyre::eyre::{ensure, Context, ContextCompat, Result};
+use color_eyre::{
+    eyre::{ensure, Context, ContextCompat},
+    Result,
+};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 

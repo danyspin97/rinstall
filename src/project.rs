@@ -5,7 +5,10 @@ use std::{
     process::Command,
 };
 
-use color_eyre::eyre::{Context, ContextCompat, Result};
+use color_eyre::{
+    eyre::{Context, ContextCompat},
+    Result,
+};
 
 // Contains data about the project that will be installed
 // It doesn't refer to the system and the actual installation directories

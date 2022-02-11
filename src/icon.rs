@@ -1,6 +1,6 @@
 use std::{path::PathBuf, str::FromStr};
 
-use color_eyre::eyre::{ensure, Result};
+use color_eyre::{eyre::ensure, Result};
 use serde::Deserialize;
 use void::Void;
 

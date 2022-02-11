@@ -1,7 +1,10 @@
 use std::{fs, path::Path};
 
 use clap::Parser;
-use color_eyre::eyre::{Context, ContextCompat, Result};
+use color_eyre::{
+    eyre::{Context, ContextCompat},
+    Result,
+};
 use colored::Colorize;
 use serde::Deserialize;
 

@@ -1,6 +1,9 @@
 use std::{fs, path::Path};
 
-use color_eyre::eyre::{ensure, Context, ContextCompat, Result};
+use color_eyre::{
+    eyre::{ensure, Context, ContextCompat},
+    Result,
+};
 
 use crate::Dirs;
 
