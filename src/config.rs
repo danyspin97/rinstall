@@ -1,3 +1,5 @@
+use std::env;
+
 use clap::Parser;
 use color_eyre::{
     eyre::{Context, ContextCompat},
@@ -107,6 +109,37 @@ pub enum SubCommand {
     GenerateRpmFiles,
 }
 
+macro_rules! merge_common_fields {
+    ($update:expr, $other:expr) => {
+        $update.config = $other.config;
+        $update.system = $other.system;
+        $update.accept_changes = $other.accept_changes;
+        $update.force = $other.force;
+        $update.update_config = $other.update_config;
+        let current_dir = env::current_dir()
+            .context("unable to get current directory")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+        $update.package_dir = Some($other.package_dir.unwrap_or(current_dir));
+        $update.packages = $other.packages;
+        $update.disable_uninstall = $other.disable_uninstall;
+        $update.destdir = $other.destdir;
+        $update.rust_debug_target = $other.rust_debug_target;
+        $update.subcmd = $other.subcmd;
+    };
+}
+macro_rules! update_fields {
+    ($update:expr, $other:expr, $($field:tt),*) => {
+        $(
+            if let Some($field) = $other.$field {
+                $update.$field = Some($field);
+            }
+        )*
+    };
+}
+
 impl Config {
     pub fn new_default_root() -> Self {
         Self {
@@ -176,17 +209,11 @@ impl Config {
         &mut self,
         config: Self,
     ) {
-        macro_rules! update_fields {
-            ($($field:tt),*) => {
-                $(
-                    if let Some($field) = config.$field {
-                        self.$field = Some($field);
-                    }
-                )*
-            };
-        }
+        merge_common_fields!(self, config);
 
         update_fields!(
+            self,
+            config,
             prefix,
             exec_prefix,
             bindir,
@@ -210,17 +237,11 @@ impl Config {
         &mut self,
         config: Self,
     ) {
-        macro_rules! update_fields {
-            ($($field:tt),*) => {
-                $(
-                    if let Some($field) = config.$field {
-                        self.$field = Some($field);
-                    }
-                )*
-            };
-        }
+        merge_common_fields!(self, config);
 
         update_fields!(
+            self,
+            config,
             bindir,
             libdir,
             libexecdir,

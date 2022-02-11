@@ -10,9 +10,9 @@ use color_eyre::{
 use colored::Colorize;
 use walkdir::WalkDir;
 
-use crate::utils::append_destdir;
 use crate::utils::write_to_file;
 use crate::Dirs;
+use crate::{config::Config, utils::append_destdir};
 use crate::{install_entry::InstallEntry, package_info::PackageInfo};
 use crate::{path_to_str, templating::Templating};
 
@@ -93,11 +93,7 @@ impl InstallTarget {
 
     pub fn install(
         self,
-        destdir: Option<&str>,
-        dry_run: bool,
-        force: bool,
-        update_config: bool,
-        package_dir: &Path,
+        config: &Config,
         dirs: &Dirs,
         pkg_info: &mut PackageInfo,
         pkg_already_installed: bool,
@@ -108,7 +104,7 @@ impl InstallTarget {
             templating,
             replace,
         } = &self;
-        let destination = append_destdir(destination, &destdir);
+        let destination = append_destdir(destination, &config.destdir.as_deref());
 
         ensure!(source.exists(), "{:?} does not exist", source);
 
@@ -123,14 +119,11 @@ impl InstallTarget {
                 destination
             };
             // destdir conflicts with force and update-config
-            if destdir.is_none()
+            if config.destdir.is_none()
                 && self.handle_existing_files(
                     source,
                     &destination,
-                    package_dir,
-                    dry_run,
-                    force,
-                    update_config,
+                    config,
                     pkg_already_installed,
                 )?
             {
@@ -138,18 +131,20 @@ impl InstallTarget {
             }
             println!(
                 "{} {} {} {}",
-                if dry_run {
+                if !config.accept_changes {
                     "Would install:"
                 } else {
                     "Installing"
                 },
-                path_to_str!(source.strip_prefix(&package_dir).unwrap_or(source))
-                    .yellow()
-                    .bold(),
+                path_to_str!(source
+                    .strip_prefix(&config.package_dir.as_ref().unwrap())
+                    .unwrap_or(source))
+                .yellow()
+                .bold(),
                 "->".purple(),
                 path_to_str!(destination).cyan().bold()
             );
-            if !dry_run {
+            if config.accept_changes {
                 fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
                     format!("unable to create directory {:?}", destination.parent())
                 })?;
@@ -164,7 +159,7 @@ impl InstallTarget {
                         format!("unable to copy file {:?} to {:?}", source, destination)
                     })?;
                 }
-                let dest_wo_destdir = if let Some(destdir) = destdir {
+                let dest_wo_destdir = if let Some(destdir) = &config.destdir {
                     destination.strip_prefix(destdir).unwrap()
                 } else {
                     &destination
@@ -187,14 +182,11 @@ impl InstallTarget {
                     let source = source.join(relative_path);
                     let destination = destination.join(relative_path);
                     // destdir conflicts with force and update-config
-                    if destdir.is_none()
+                    if config.destdir.is_none()
                         && self.handle_existing_files(
                             &source,
                             &destination,
-                            package_dir,
-                            dry_run,
-                            force,
-                            update_config,
+                            config,
                             pkg_already_installed,
                         )?
                     {
@@ -202,18 +194,20 @@ impl InstallTarget {
                     }
                     println!(
                         "{} {} {} {}",
-                        if dry_run {
+                        if !config.accept_changes {
                             "Would install:"
                         } else {
                             "Installing"
                         },
-                        path_to_str!(source.strip_prefix(&package_dir).unwrap_or(&source))
-                            .yellow()
-                            .bold(),
+                        path_to_str!(source
+                            .strip_prefix(&config.package_dir.as_ref().unwrap())
+                            .unwrap_or(&source))
+                        .yellow()
+                        .bold(),
                         "->".purple(),
                         path_to_str!(destination).cyan().bold()
                     );
-                    if dry_run {
+                    if !config.accept_changes {
                         return Ok(());
                     }
                     fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
@@ -245,15 +239,12 @@ impl InstallTarget {
         &self,
         source: &Path,
         destination: &Path,
-        package_dir: &Path,
-        dry_run: bool,
-        force: bool,
-        update_config: bool,
+        config: &Config,
         pkg_already_installed: bool,
     ) -> Result<bool> {
         if destination.exists() && self.replace {
-            if !force {
-                if dry_run {
+            if !config.force {
+                if !config.accept_changes {
                     if !pkg_already_installed {
                         eprintln!(
                             "{} file {} already exists, add {} to overwrite it",
@@ -268,7 +259,7 @@ impl InstallTarget {
                         destination
                     );
                 }
-            } else if dry_run {
+            } else if !config.accept_changes {
                 eprintln!(
                     "{} file {} already exists, it would be overwritten",
                     "WARNING:".red().italic(),
@@ -283,8 +274,8 @@ impl InstallTarget {
             }
         }
         if destination.exists() && !self.replace {
-            if update_config {
-                if dry_run {
+            if config.update_config {
+                if !config.accept_changes {
                     if !pkg_already_installed {
                         eprintln!(
                             "{} config {} will be overwritten",
@@ -302,10 +293,16 @@ impl InstallTarget {
             } else {
                 println!(
                     "{} config {} {} {}",
-                    if dry_run { "Would skip" } else { "Skipping" },
-                    path_to_str!(source.strip_prefix(&package_dir).unwrap_or(source))
-                        .yellow()
-                        .bold(),
+                    if !config.accept_changes {
+                        "Would skip"
+                    } else {
+                        "Skipping"
+                    },
+                    path_to_str!(source
+                        .strip_prefix(&config.package_dir.as_ref().unwrap())
+                        .unwrap_or(source))
+                    .yellow()
+                    .bold(),
                     "->".purple(),
                     path_to_str!(destination).cyan().bold()
                 );

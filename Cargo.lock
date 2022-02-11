@@ -436,6 +436,7 @@ dependencies = [
  "color-eyre",
  "colored",
  "json",
+ "lazy_static",
  "libc",
  "semver",
  "serde",

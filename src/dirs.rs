@@ -27,24 +27,24 @@ pub struct Dirs {
 }
 
 impl Dirs {
-    pub fn new(config: Config) -> Result<Dirs> {
+    pub fn new(config: &Config) -> Result<Dirs> {
         let mut dirs = Self {
-            prefix: config.prefix.map(PathBuf::from),
-            exec_prefix: config.exec_prefix.map(PathBuf::from),
-            bindir: PathBuf::from(config.bindir.unwrap()),
-            sbindir: config.sbindir.map(PathBuf::from),
-            libdir: PathBuf::from(config.libdir.unwrap()),
-            libexecdir: PathBuf::from(config.libexecdir.unwrap()),
-            datarootdir: PathBuf::from(config.datarootdir.unwrap()),
-            datadir: PathBuf::from(config.datadir.unwrap()),
-            sysconfdir: PathBuf::from(config.sysconfdir.unwrap()),
-            localstatedir: PathBuf::from(config.localstatedir.unwrap()),
-            runstatedir: PathBuf::from(config.runstatedir.unwrap()),
-            includedir: config.includedir.map(PathBuf::from),
-            docdir: config.docdir.map(PathBuf::from),
-            mandir: config.mandir.map(PathBuf::from),
-            pam_modulesdir: config.pam_modulesdir.map(PathBuf::from),
-            systemd_unitsdir: PathBuf::from(config.systemd_unitsdir.unwrap()),
+            prefix: config.prefix.as_ref().map(PathBuf::from),
+            exec_prefix: config.exec_prefix.as_ref().map(PathBuf::from),
+            bindir: PathBuf::from(config.bindir.as_ref().unwrap()),
+            sbindir: config.sbindir.as_ref().map(PathBuf::from),
+            libdir: PathBuf::from(config.libdir.as_ref().unwrap()),
+            libexecdir: PathBuf::from(config.libexecdir.as_ref().unwrap()),
+            datarootdir: PathBuf::from(config.datarootdir.as_ref().unwrap()),
+            datadir: PathBuf::from(config.datadir.as_ref().unwrap()),
+            sysconfdir: PathBuf::from(config.sysconfdir.as_ref().unwrap()),
+            localstatedir: PathBuf::from(config.localstatedir.as_ref().unwrap()),
+            runstatedir: PathBuf::from(config.runstatedir.as_ref().unwrap()),
+            includedir: config.includedir.as_ref().map(PathBuf::from),
+            docdir: config.docdir.as_ref().map(PathBuf::from),
+            mandir: config.mandir.as_ref().map(PathBuf::from),
+            pam_modulesdir: config.pam_modulesdir.as_ref().map(PathBuf::from),
+            systemd_unitsdir: PathBuf::from(config.systemd_unitsdir.as_ref().unwrap()),
         };
 
         if !config.system {
