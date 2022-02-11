@@ -250,20 +250,20 @@ fn main() -> Result<()> {
             SubCommand::GenerateRpmFiles => {
                 let mut res = String::new();
                 let mut owned_dir = HashSet::new();
-                owned_dir.insert(dirs.bindir.clone());
-                owned_dir.insert(dirs.datadir.clone());
+                owned_dir.insert(dirs.bindir);
+                owned_dir.insert(dirs.datadir);
                 owned_dir.insert(dirs.datarootdir.clone());
                 // unwrapping here is safe, because GenerateRpmFiles requires --system
-                owned_dir.insert(dirs.docdir.unwrap().clone());
-                owned_dir.insert(dirs.includedir.unwrap().clone());
-                owned_dir.insert(dirs.libdir.clone());
-                owned_dir.insert(dirs.libexecdir.clone());
-                owned_dir.insert(dirs.localstatedir.clone());
-                owned_dir.insert(dirs.mandir.unwrap().clone());
-                owned_dir.insert(dirs.pam_modulesdir.unwrap().clone());
-                owned_dir.insert(dirs.sbindir.unwrap().clone());
-                owned_dir.insert(dirs.sysconfdir.clone());
-                owned_dir.insert(dirs.systemd_unitsdir.clone());
+                owned_dir.insert(dirs.docdir.unwrap());
+                owned_dir.insert(dirs.includedir.unwrap());
+                owned_dir.insert(dirs.libdir);
+                owned_dir.insert(dirs.libexecdir);
+                owned_dir.insert(dirs.localstatedir);
+                owned_dir.insert(dirs.mandir.unwrap());
+                owned_dir.insert(dirs.pam_modulesdir.unwrap());
+                owned_dir.insert(dirs.sbindir.unwrap());
+                owned_dir.insert(dirs.sysconfdir);
+                owned_dir.insert(dirs.systemd_unitsdir);
                 owned_dir.insert(dirs.datarootdir.join("licenses"));
                 owned_dir.insert(dirs.datarootdir.join("applications"));
                 owned_dir.insert(dirs.datarootdir.join("zsh").join("site-functions"));

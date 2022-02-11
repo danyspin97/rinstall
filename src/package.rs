@@ -235,7 +235,7 @@ impl Package {
 
         if system_install {
             let pkg_docs = &dirs.docdir.as_ref().unwrap().join(Path::new(&package_name));
-            results.extend(get_files!(docs, &pkg_docs, &project.projectdir, "docs"));
+            results.extend(get_files!(docs, pkg_docs, &project.projectdir, "docs"));
             results.extend(get_files!(
                 user_config,
                 &pkg_docs.join("user-config"),
