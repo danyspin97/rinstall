@@ -17,10 +17,10 @@ pub struct Uninstall {
     #[clap(
         short = 'y',
         long = "yes",
-        about = "Accept the changes and perform the uninstallation"
+        help = "Accept the changes and perform the uninstallation"
     )]
     accept_changes: bool,
-    #[clap(short = 'f', long = "force", about = "Force the uninstallation")]
+    #[clap(short = 'f', long = "force", help = "Force the uninstallation")]
     force: bool,
 }
 

@@ -12,28 +12,28 @@ use crate::uninstall::Uninstall;
 #[clap(version = "0.1.0", author = "Danilo Spinella <oss@danyspin97.org>")]
 pub struct Config {
     #[serde(skip_deserializing)]
-    #[clap(short, long, about = "Path to the rinstall.yml configuration")]
+    #[clap(short, long, help = "Path to the rinstall.yml configuration")]
     pub config: Option<String>,
     #[serde(skip_deserializing)]
-    #[clap(long = "system", about = "Perform a system-wide installation")]
+    #[clap(long = "system", help = "Perform a system-wide installation")]
     pub system: bool,
     #[serde(skip_deserializing)]
     #[clap(
         short = 'y',
         long = "yes",
-        about = "Accept the changes and perform the installation"
+        help = "Accept the changes and perform the installation"
     )]
     pub accept_changes: bool,
     #[clap(
         short = 'f',
         long = "force",
-        about = "Force the installation by overwriting (non-config) files",
+        help = "Force the installation by overwriting (non-config) files",
         conflicts_with = "destdir"
     )]
     pub force: bool,
     #[clap(
         long = "update-config",
-        about = "Overwrite the existing configurations of the package",
+        help = "Overwrite the existing configurations of the package",
         conflicts_with = "destdir"
     )]
     pub update_config: bool,
@@ -41,14 +41,14 @@ pub struct Config {
     #[clap(
         short = 'P',
         long,
-        about = "Path to the directory containing the project to install"
+        help = "Path to the directory containing the project to install"
     )]
     pub package_dir: Option<String>,
     #[serde(skip_deserializing, default)]
     #[clap(
         short = 'p',
         long = "pkgs",
-        about = "List of packages to install, separated by a comma"
+        help = "List of packages to install, separated by a comma"
     )]
     pub packages: Vec<String>,
     #[serde(skip_deserializing)]
@@ -92,7 +92,7 @@ pub struct Config {
     #[serde(skip_deserializing)]
     #[clap(
         long,
-        about = "Use the generated binaries and libraries from the debug profile (only effective for rust projects)"
+        help = "Use the generated binaries and libraries from the debug profile (only effective for rust projects)"
     )]
     pub rust_debug_target: bool,
     #[serde(skip_deserializing)]

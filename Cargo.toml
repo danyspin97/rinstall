@@ -4,15 +4,15 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-blake3 = "1.2.0"
-clap = "3.0.0-beta.5"
-color-eyre = "0.5.11"
+blake3 = "1.3.1"
+clap = { version = "3.0.14", features = ["derive"] }
+color-eyre = "0.6.0"
 colored = "2.0.0"
 json = "0.12.4"
-libc = "0.2.108"
-semver = { version = "1.0.4", features = ["serde"] }
-serde = { version = "1.0.130", features = ["derive"] }
-serde_yaml = "0.8.21"
+libc = "0.2.117"
+semver = { version = "1.0.5", features = ["serde"] }
+serde = { version = "1.0.136", features = ["derive"] }
+serde_yaml = "0.8.23"
 xdg = "2.4.0"
 walkdir = "2.3.2"
 void = "1.0.2"
