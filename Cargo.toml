@@ -17,3 +17,10 @@ serde_yaml = "0.8.23"
 xdg = "2.4.0"
 walkdir = "2.3.2"
 void = "1.0.2"
+
+[build-dependencies]
+clap = { version = "3.1.1", features = ["derive", "cargo", "env"] }
+clap_complete = "3.1.0"
+clap_mangen = "0.1.2"
+# used for the imports in src/config.rs
+serde = { version = "1.0.136", features = ["derive"] }

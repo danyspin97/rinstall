@@ -12,9 +12,9 @@ use walkdir::WalkDir;
 
 use crate::utils::write_to_file;
 use crate::Dirs;
-use crate::{config::Config, utils::append_destdir};
 use crate::{install_entry::InstallEntry, package_info::PackageInfo};
 use crate::{path_to_str, templating::Templating};
+use crate::{utils::append_destdir, Config};
 
 pub struct InstallTarget {
     pub source: PathBuf,

@@ -1,4 +1,4 @@
-mod config;
+mod config_impl;
 mod dirs;
 mod icon;
 mod install_entry;
@@ -8,7 +8,7 @@ mod package;
 mod package_info;
 mod project;
 mod templating;
-mod uninstall;
+mod uninstall_impl;
 mod utils;
 
 #[macro_use]
@@ -28,11 +28,12 @@ use color_eyre::{
 use colored::*;
 use xdg::BaseDirectories;
 
-use config::{Config, SubCommand};
+pub use config_impl::{Config, SubCommand};
 use dirs::Dirs;
 use install_spec::InstallSpec;
 use package::Package;
 use project::Project;
+pub use uninstall_impl::Uninstall;
 
 use crate::{package_info::PackageInfo, utils::append_destdir};
 

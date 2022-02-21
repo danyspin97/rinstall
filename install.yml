@@ -8,3 +8,12 @@ pkgs:
       - README.md
     licenses:
       - LICENSE.md
+    man:
+      - man/rinstall.1
+    completions:
+      bash:
+        - completions/rinstall.bash
+      fish:
+        - completions/rinstall.fish
+      zsh:
+        - completions/_rinstall
