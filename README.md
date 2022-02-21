@@ -473,11 +473,11 @@ For PAM modules. If only `src` is provided, and the name of the file starts with
 
 For systemd system units.
 
-#### `systemd-units`
+#### `systemd-user-units`
 
 | Version | System-wide only |
 | --- | --- |
-| _since 0.1.0_ | *no* |
+| _since 0.2.0_ | *no* |
 
 | | Installed in | Defaults to |
 | --- | --- | --- |

@@ -573,6 +573,12 @@ impl Package {
         );
         check_version!(rinstall_version, "pam-modules", pam_modules, ">=0.1.0");
         check_version!(rinstall_version, "systemd-units", systemd_units, ">=0.1.0");
+        check_version!(
+            rinstall_version,
+            "systemd-user-units",
+            systemd_user_units,
+            ">=0.2.0"
+        );
         check_version!(rinstall_version, "icons", icons, ">=0.1.0");
         check_version!(rinstall_version, "terminfo", terminfo, ">=0.1.0");
         check_version!(rinstall_version, "licenses", licenses, ">=0.1.0");
