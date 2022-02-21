@@ -121,7 +121,7 @@ impl Package {
         rinstall_version: &Version,
         system_install: bool,
     ) -> Result<Vec<InstallTarget>> {
-        let allowed_version = vec!["0.1.0"];
+        let allowed_version = vec!["0.1.0", "0.2.0"];
         allowed_version
             .iter()
             .map(|v| Version::parse(v).unwrap())
