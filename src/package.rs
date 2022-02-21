@@ -13,6 +13,8 @@ use crate::install_target::InstallTarget;
 use crate::project::Project;
 use crate::Dirs;
 
+static PROJECTDIR_NEEDLE: &'static str = "$PROJECTDIR";
+
 #[derive(Deserialize, Clone)]
 pub enum Type {
     #[serde(rename(deserialize = "custom"))]
@@ -127,7 +129,26 @@ impl Package {
                 self.$files
                     .into_iter()
                     .map(|entry| -> Result<InstallTarget> {
-                        InstallTarget::new(entry!(entry), $install_dir, $parent_dir, $replace)
+                        let entry = entry!(entry);
+                        if $parent_dir == &project.outputdir
+                            && entry.source.starts_with(PROJECTDIR_NEEDLE)
+                        {
+                            InstallTarget::new(
+                                InstallEntry {
+                                    source: entry
+                                        .source
+                                        .strip_prefix(PROJECTDIR_NEEDLE)?
+                                        .to_path_buf(),
+                                    destination: entry.destination,
+                                    templating: entry.templating,
+                                },
+                                $install_dir,
+                                &project.projectdir,
+                                $replace,
+                            )
+                        } else {
+                            InstallTarget::new(entry, $install_dir, $parent_dir, $replace)
+                        }
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
                     .with_context(|| format!("error while iterating {} files", $name))?

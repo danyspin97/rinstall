@@ -261,7 +261,8 @@ used.
 
 - `rust` for projects built using `cargo`. The target directory is fetched using `cargo metadata`
   and used as root directory for executables and libraries. I.e. you don't need to use
-  `target/release/myexe` when listing executables, but just `myexe`.
+  `target/release/myexe` when listing executables, but just `myexe`. If you need to install
+  an executable script in a Rust project, use `$PROJECTDIR/` prefix.
 
 - `custom` for all the other projects. All the directories will be relative to the root directory
   of the project.
