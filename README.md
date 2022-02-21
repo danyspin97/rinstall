@@ -213,7 +213,6 @@ pkgs:
     exe:
       - bar
   bar-c:
-    type: custom
     include:
       - bar.h
 ```
@@ -256,7 +255,7 @@ were expliticly noted***.
 
 (_since 0.1.0_)
 
-The type part can either be `rust` or `custom`. If no value is specified, then `custom` will be
+The type part can either be `rust` or `default`. If no value is specified, then `default` will be
 used.
 
 - `rust` for projects built using `cargo`. The target directory is fetched using `cargo metadata`
@@ -264,7 +263,7 @@ used.
   `target/release/myexe` when listing executables, but just `myexe`. If you need to install
   an executable script in a Rust project, use `$PROJECTDIR/` prefix.
 
-- `custom` for all the other projects. All the directories will be relative to the root directory
+- `default` for all the other projects. All the directories will be relative to the root directory
   of the project.
 
 #### `exe`

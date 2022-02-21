@@ -4,6 +4,7 @@ use color_eyre::{
     eyre::{ensure, Context, ContextCompat},
     Result,
 };
+use colored::Colorize;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 
@@ -15,12 +16,20 @@ use crate::Dirs;
 
 static PROJECTDIR_NEEDLE: &'static str = "$PROJECTDIR";
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, PartialEq)]
 pub enum Type {
-    #[serde(rename(deserialize = "custom"))]
-    Custom,
+    #[serde(rename(deserialize = "default"))]
+    Default,
     #[serde(rename(deserialize = "rust"))]
     Rust,
+    #[serde(rename(deserialize = "custom"))]
+    Custom,
+}
+
+impl Default for Type {
+    fn default() -> Self {
+        Self::Default
+    }
 }
 
 #[derive(Deserialize)]
@@ -52,7 +61,7 @@ struct Completions {
 #[serde(deny_unknown_fields)]
 pub struct Package {
     pub name: Option<String>,
-    #[serde(rename(deserialize = "type"))]
+    #[serde(rename(deserialize = "type"), default)]
     pub project_type: Type,
     #[serde(default)]
     exe: Vec<Entry>,
@@ -515,6 +524,18 @@ impl Package {
             };
         }
 
+        if self.project_type == Type::Custom
+            && VersionReq::parse(">=0.2.0")
+                .unwrap()
+                .matches(rinstall_version)
+        {
+            eprintln!(
+                "{}: type '{}' has been deprecated, use '{}' or leave it empty",
+                "WARNING".red().italic(),
+                "custom".bright_black(),
+                "default".bright_black(),
+            );
+        }
         check_version!(rinstall_version, "exe", exe, ">=0.1.0");
         check_version!(rinstall_version, "admin_exe", admin_exe, ">=0.1.0");
         check_version!(rinstall_version, "libs", libs, ">=0.1.0");

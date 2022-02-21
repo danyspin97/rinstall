@@ -33,7 +33,7 @@ impl Project {
             } else {
                 match project_type {
                     Type::Rust => get_target_dir_for_rust(&projectdir, rust_debug_target)?,
-                    Type::Custom => projectdir.clone(),
+                    Type::Default | Type::Custom => projectdir.clone(),
                 }
             },
             projectdir,
