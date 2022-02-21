@@ -508,10 +508,10 @@ impl Package {
         rinstall_version: &Version,
     ) -> Result<()> {
         macro_rules! check_version_expr {
-            ( $version:ident, $name:literal, $type:expr, $req:literal ) => {
+            ( $name:literal, $type:expr, $req:literal ) => {
                 let requires = VersionReq::parse($req).unwrap();
                 ensure!(
-                    $type.is_empty() || requires.matches(&$version),
+                    $type.is_empty() || requires.matches(&rinstall_version),
                     "{} requires version {}",
                     $name,
                     requires
@@ -519,8 +519,8 @@ impl Package {
             };
         }
         macro_rules! check_version {
-            ( $version:ident, $name:literal, $type:ident, $req:literal ) => {
-                check_version_expr!($version, $name, self.$type, $req);
+            ( $name:literal, $type:ident, $req:literal ) => {
+                check_version_expr!($name, self.$type, $req);
             };
         }
 
@@ -536,53 +536,28 @@ impl Package {
                 "default".bright_black(),
             );
         }
-        check_version!(rinstall_version, "exe", exe, ">=0.1.0");
-        check_version!(rinstall_version, "admin_exe", admin_exe, ">=0.1.0");
-        check_version!(rinstall_version, "libs", libs, ">=0.1.0");
-        check_version!(rinstall_version, "libexec", libexec, ">=0.1.0");
-        check_version!(rinstall_version, "includes", includes, ">=0.1.0");
-        check_version!(rinstall_version, "man", man, ">=0.1.0");
-        check_version!(rinstall_version, "data", data, ">=0.1.0");
-        check_version!(rinstall_version, "docs", docs, ">=0.1.0");
-        check_version!(rinstall_version, "config", config, ">=0.1.0");
-        check_version!(rinstall_version, "user-config", user_config, ">=0.1.0");
-        check_version!(rinstall_version, "desktop-files", desktop_files, ">=0.1.0");
-        check_version!(
-            rinstall_version,
-            "appstream-metadata",
-            appstream_metadata,
-            ">=0.1.0"
-        );
-        check_version_expr!(
-            rinstall_version,
-            "completions:bash",
-            self.completions.bash,
-            ">=0.1.0"
-        );
-        check_version_expr!(
-            rinstall_version,
-            "completions:fish",
-            self.completions.fish,
-            ">=0.1.0"
-        );
-        check_version_expr!(
-            rinstall_version,
-            "completions:zsh",
-            self.completions.zsh,
-            ">=0.1.0"
-        );
-        check_version!(rinstall_version, "pam-modules", pam_modules, ">=0.1.0");
-        check_version!(rinstall_version, "systemd-units", systemd_units, ">=0.1.0");
-        check_version!(
-            rinstall_version,
-            "systemd-user-units",
-            systemd_user_units,
-            ">=0.2.0"
-        );
-        check_version!(rinstall_version, "icons", icons, ">=0.1.0");
-        check_version!(rinstall_version, "terminfo", terminfo, ">=0.1.0");
-        check_version!(rinstall_version, "licenses", licenses, ">=0.1.0");
-        check_version!(rinstall_version, "pkg-config", pkg_config, ">=0.1.0");
+        check_version!("exe", exe, ">=0.1.0");
+        check_version!("admin_exe", admin_exe, ">=0.1.0");
+        check_version!("libs", libs, ">=0.1.0");
+        check_version!("libexec", libexec, ">=0.1.0");
+        check_version!("includes", includes, ">=0.1.0");
+        check_version!("man", man, ">=0.1.0");
+        check_version!("data", data, ">=0.1.0");
+        check_version!("docs", docs, ">=0.1.0");
+        check_version!("config", config, ">=0.1.0");
+        check_version!("user-config", user_config, ">=0.1.0");
+        check_version!("desktop-files", desktop_files, ">=0.1.0");
+        check_version!("appstream-metadata", appstream_metadata, ">=0.1.0");
+        check_version_expr!("completions:bash", self.completions.bash, ">=0.1.0");
+        check_version_expr!("completions:fish", self.completions.fish, ">=0.1.0");
+        check_version_expr!("completions:zsh", self.completions.zsh, ">=0.1.0");
+        check_version!("pam-modules", pam_modules, ">=0.1.0");
+        check_version!("systemd-units", systemd_units, ">=0.1.0");
+        check_version!("systemd-user-units", systemd_user_units, ">=0.2.0");
+        check_version!("icons", icons, ">=0.1.0");
+        check_version!("terminfo", terminfo, ">=0.1.0");
+        check_version!("licenses", licenses, ">=0.1.0");
+        check_version!("pkg-config", pkg_config, ">=0.1.0");
 
         Ok(())
     }
