@@ -14,7 +14,7 @@ use crate::install_target::InstallTarget;
 use crate::project::Project;
 use crate::Dirs;
 
-static PROJECTDIR_NEEDLE: &'static str = "$PROJECTDIR";
+static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
 
 #[derive(Deserialize, Clone, PartialEq)]
 pub enum Type {
