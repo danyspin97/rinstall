@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use clap::Parser;
 use color_eyre::{
-    eyre::{Context, ContextCompat},
+    eyre::{ensure, Context, ContextCompat},
     Result,
 };
 use colored::Colorize;
@@ -25,6 +25,11 @@ impl Uninstall {
         let pkg_info = &localstatedir
             .join("rinstall")
             .join(format!("{}.pkg", &self.pkg_name));
+        ensure!(
+            pkg_info.exists(),
+            "package {} is not installed",
+            self.pkg_name
+        );
         let pkg_info: PackageInfo = serde_yaml::from_str(
             &fs::read_to_string(&pkg_info)
                 .with_context(|| format!("unable to read file {:?}", &pkg_info))?,
