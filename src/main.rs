@@ -246,7 +246,11 @@ fn main() -> Result<()> {
                 owned_dir.insert(dirs.libdir);
                 owned_dir.insert(dirs.libexecdir);
                 owned_dir.insert(dirs.localstatedir);
-                owned_dir.insert(dirs.mandir.unwrap());
+                let mandir = dirs.mandir.unwrap();
+                owned_dir.insert(mandir.clone());
+                for i in 1..8 {
+                    owned_dir.insert(mandir.join(format!("man{i}")));
+                }
                 owned_dir.insert(dirs.pam_modulesdir.unwrap());
                 owned_dir.insert(dirs.sbindir.unwrap());
                 owned_dir.insert(dirs.sysconfdir);
@@ -255,6 +259,7 @@ fn main() -> Result<()> {
                 owned_dir.insert(dirs.datarootdir.join("applications"));
                 owned_dir.insert(dirs.datarootdir.join("zsh").join("site-functions"));
                 owned_dir.insert(dirs.datarootdir.join("bash-completion").join("completions"));
+                owned_dir.insert(dirs.datarootdir.join("fish").join("vendor_completions.d"));
 
                 for file in rpm_files {
                     let mut parent_dirs = Vec::new();
