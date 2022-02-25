@@ -48,7 +48,7 @@ $ cargo build --release
 To install rinstall for the current user:
 
 ```
-$ ./target/release/rinstall -y
+$ ./target/release/rinstall install -y
 ```
 
 ## Usage
@@ -59,13 +59,13 @@ If the project has an `install.yml` file present, either in the root directory o
 Run rinstall as your user to see the changes that will be done to the filesystem:
 
 ```
-$ rinstall
+$ rinstall install --system
 ```
 
 After having reviewed the changes, add `-y` or `--yes` to perform an user installation:
 
 ```
-$ rinstall -y
+$ rinstall install -y
 ```
 
 The same apply for performing a system-wide installation. Run **rinstall** as root and it
@@ -73,20 +73,20 @@ automatically switch to system-wide mode. To list the changes made to the filesy
 run **rinstall without any arguments:
 
 ```
-# rinstall
+# rinstall install
 ```
 
 To accept the changes, run again the command and append `-y` or `--yes`:
 
 ```
-# rinstall -y
+# rinstall install -y
 ```
 
 You can also review the changes of a system-wide installation while running **rinstall** as
 a non-privileged user:
 
 ```
-$ rinstall --system
+$ rinstall install --system
 ```
 
 
@@ -591,7 +591,7 @@ This project has used @prefix@ as its prefix and @bindir@ as its bindir.
 Then we invoke rinstall like this:
 
 ```
-# rinstall -y --prefix /usr --bindir "@prefix@/bin"
+# rinstall install -y --prefix /usr --bindir "@prefix@/bin"
 ```
 
 The documentation file `my-doc.md` installed will look like the following:

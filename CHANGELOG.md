@@ -7,6 +7,7 @@
   + Use `/usr/local/lib/systemd` as systemd_unitsdir instead of
     `/usr/local/lib/systemd/system`
   + `user-config` will be installed as docs in system-wide installations
+  + Move default command to an install subcommand
 * Add colored output
 * Add `rpm-files` command
 * Add new `--rust-debug-target` flag

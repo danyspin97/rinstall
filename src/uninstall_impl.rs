@@ -6,7 +6,6 @@ use color_eyre::{
     Result,
 };
 use colored::Colorize;
-use serde::Deserialize;
 
 use crate::{package_info::PackageInfo, path_to_str};
 

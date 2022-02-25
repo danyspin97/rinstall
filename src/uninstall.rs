@@ -1,7 +1,6 @@
-#[derive(Parser, Deserialize, Clone)]
+#[derive(Parser, Clone)]
 pub struct Uninstall {
     pkg_name: String,
-    #[serde(skip_deserializing)]
     #[clap(
         short = 'y',
         long = "yes",

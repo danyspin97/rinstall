@@ -5,7 +5,7 @@ use std::{
 
 use color_eyre::Result;
 
-use crate::Config;
+use crate::DirsConfig;
 
 pub struct Dirs {
     pub prefix: Option<PathBuf>,
@@ -27,27 +27,30 @@ pub struct Dirs {
 }
 
 impl Dirs {
-    pub fn new(config: &Config) -> Result<Dirs> {
+    pub fn new(
+        dirs_config: DirsConfig,
+        system: bool,
+    ) -> Result<Dirs> {
         let mut dirs = Self {
-            prefix: config.prefix.as_ref().map(PathBuf::from),
-            exec_prefix: config.exec_prefix.as_ref().map(PathBuf::from),
-            bindir: PathBuf::from(config.bindir.as_ref().unwrap()),
-            sbindir: config.sbindir.as_ref().map(PathBuf::from),
-            libdir: PathBuf::from(config.libdir.as_ref().unwrap()),
-            libexecdir: PathBuf::from(config.libexecdir.as_ref().unwrap()),
-            datarootdir: PathBuf::from(config.datarootdir.as_ref().unwrap()),
-            datadir: PathBuf::from(config.datadir.as_ref().unwrap()),
-            sysconfdir: PathBuf::from(config.sysconfdir.as_ref().unwrap()),
-            localstatedir: PathBuf::from(config.localstatedir.as_ref().unwrap()),
-            runstatedir: PathBuf::from(config.runstatedir.as_ref().unwrap()),
-            includedir: config.includedir.as_ref().map(PathBuf::from),
-            docdir: config.docdir.as_ref().map(PathBuf::from),
-            mandir: config.mandir.as_ref().map(PathBuf::from),
-            pam_modulesdir: config.pam_modulesdir.as_ref().map(PathBuf::from),
-            systemd_unitsdir: PathBuf::from(config.systemd_unitsdir.as_ref().unwrap()),
+            prefix: dirs_config.prefix.map(PathBuf::from),
+            exec_prefix: dirs_config.exec_prefix.map(PathBuf::from),
+            bindir: PathBuf::from(dirs_config.bindir.unwrap()),
+            sbindir: dirs_config.sbindir.map(PathBuf::from),
+            libdir: PathBuf::from(dirs_config.libdir.unwrap()),
+            libexecdir: PathBuf::from(dirs_config.libexecdir.unwrap()),
+            datarootdir: PathBuf::from(dirs_config.datarootdir.unwrap()),
+            datadir: PathBuf::from(dirs_config.datadir.unwrap()),
+            sysconfdir: PathBuf::from(dirs_config.sysconfdir.unwrap()),
+            localstatedir: PathBuf::from(dirs_config.localstatedir.unwrap()),
+            runstatedir: PathBuf::from(dirs_config.runstatedir.unwrap()),
+            includedir: dirs_config.includedir.map(PathBuf::from),
+            docdir: dirs_config.docdir.map(PathBuf::from),
+            mandir: dirs_config.mandir.map(PathBuf::from),
+            pam_modulesdir: dirs_config.pam_modulesdir.map(PathBuf::from),
+            systemd_unitsdir: PathBuf::from(dirs_config.systemd_unitsdir.unwrap()),
         };
 
-        if !config.system {
+        if !system {
             dirs.append_home();
         }
         dirs.check_absolute_paths()?;
