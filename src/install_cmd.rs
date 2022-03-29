@@ -24,8 +24,11 @@ pub struct InstallCmd {
     pub rust_debug_target: bool,
     #[clap(short = 'D', long, requires = "system")]
     pub destdir: Option<String>,
-    #[clap(long = "disable-uninstall")]
-    pub disable_uninstall: bool,
+    #[clap(
+        long = "skip-pkginfo",
+        help = "Skip the installation of rinstall pkginfo, used for uninstallation"
+    )]
+    pub skip_pkg_info: bool,
     #[clap(from_global)]
     pub package_dir: Option<String>,
     #[clap(from_global)]

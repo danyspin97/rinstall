@@ -70,7 +70,7 @@ impl InstallCmd {
                 )?;
             }
 
-            if !self.disable_uninstall {
+            if !self.skip_pkg_info {
                 if !self.accept_changes {
                     println!(
                         "Would install installation data in {}",
