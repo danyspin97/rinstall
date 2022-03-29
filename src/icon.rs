@@ -20,8 +20,8 @@ pub struct Icon {
 }
 
 impl Icon {
-    fn new_with_source(source: PathBuf) -> Self {
-        Icon {
+    const fn new_with_source(source: PathBuf) -> Self {
+        Self {
             source,
             destination: None,
             icon_type: None,
@@ -66,6 +66,6 @@ impl FromStr for Icon {
     type Err = Void;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Icon::new_with_source(PathBuf::from(s)))
+        Ok(Self::new_with_source(PathBuf::from(s)))
     }
 }

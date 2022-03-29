@@ -18,6 +18,7 @@ macro_rules! update_fields {
 }
 
 impl DirsConfig {
+    #[must_use]
     pub fn system_config() -> Self {
         Self {
             prefix: Some("/usr/local".to_string()),
@@ -39,6 +40,7 @@ impl DirsConfig {
         }
     }
 
+    #[must_use]
     pub fn user_config() -> Self {
         Self {
             prefix: None,

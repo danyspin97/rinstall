@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     let opts = Config::parse();
     let uid = unsafe { libc::getuid() };
     let dry_run = !opts.accept_changes;
-    let system_install = if uid != 0 { opts.system } else { true };
+    let system_install = if uid == 0 { true } else { opts.system };
 
     let mut dirs_config = if system_install {
         DirsConfig::system_config()
@@ -101,12 +101,12 @@ fn main() -> Result<()> {
 
     match opts.subcmd {
         SubCommand::Uninstall(uninstall) => {
-            uninstall.run(Path::new(&dirs.localstatedir), dry_run)?
+            uninstall.run(Path::new(&dirs.localstatedir), dry_run)?;
         }
         SubCommand::GenerateRpmFiles(generate_rpm) => {
-            generate_rpm.run(package_dir, install_spec, dirs)?
+            generate_rpm.run(&package_dir, install_spec, dirs)?;
         }
-        SubCommand::Install(install) => install.run(&package_dir, install_spec, dirs)?,
+        SubCommand::Install(install) => install.run(&package_dir, install_spec, &dirs)?,
     }
 
     Ok(())

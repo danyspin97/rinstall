@@ -78,7 +78,7 @@ impl PackageInfo {
         &self,
         destdir: Option<&str>,
     ) -> Result<()> {
-        let path = append_destdir(&self.path, &destdir);
+        let path = append_destdir(&self.path, destdir);
         fs::create_dir_all(path.parent().unwrap())
             .with_context(|| format!("unable to create parent directory for {:?}", path))?;
         write_to_file(

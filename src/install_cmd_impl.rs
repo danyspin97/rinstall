@@ -26,7 +26,7 @@ impl InstallCmd {
         self,
         package_dir: &Path,
         install_spec: InstallSpec,
-        dirs: Dirs,
+        dirs: &Dirs,
     ) -> Result<()> {
         // Check if the projectdir is a release tarball instead of the
         // directory containing the source code
@@ -35,8 +35,8 @@ impl InstallCmd {
 
         let packages = install_spec.packages(&self.packages);
         for package in packages {
-            let mut pkg_info = PackageInfo::new(package.name.as_ref().unwrap(), &dirs);
-            let pkg_info_path = append_destdir(&pkg_info.path, &self.destdir.as_deref());
+            let mut pkg_info = PackageInfo::new(package.name.as_ref().unwrap(), dirs);
+            let pkg_info_path = append_destdir(&pkg_info.path, self.destdir.as_deref());
             let pkg_already_installed = pkg_info_path.exists();
             println!(
                 "{} {} {}",
@@ -58,12 +58,12 @@ impl InstallCmd {
                 self.rust_debug_target,
             )?;
 
-            let targets = package.targets(&dirs, project, &version, self.system)?;
+            let targets = package.targets(dirs, &project, &version, self.system)?;
 
             for target in targets {
                 self.install_target(
-                    target,
-                    &dirs,
+                    &target,
+                    dirs,
                     &mut pkg_info,
                     pkg_already_installed,
                     package_dir,
@@ -71,21 +71,7 @@ impl InstallCmd {
             }
 
             if !self.skip_pkg_info {
-                if !self.accept_changes {
-                    println!(
-                        "Would install {} in {}",
-                        "pkginfo".yellow().bold(),
-                        pkg_info
-                            .path
-                            .to_str()
-                            .with_context(|| format!(
-                                "unable to convert {:?} to string",
-                                pkg_info.path
-                            ))?
-                            .cyan()
-                            .bold()
-                    );
-                } else {
+                if self.accept_changes {
                     println!(
                         "Installing {} in {}",
                         "pkginfo".yellow().bold(),
@@ -99,6 +85,20 @@ impl InstallCmd {
                             .bold()
                     );
                     pkg_info.install(self.destdir.as_deref())?;
+                } else {
+                    println!(
+                        "Would install {} in {}",
+                        "pkginfo".yellow().bold(),
+                        pkg_info
+                            .path
+                            .to_str()
+                            .with_context(|| format!(
+                                "unable to convert {:?} to string",
+                                pkg_info.path
+                            ))?
+                            .cyan()
+                            .bold()
+                    );
                 }
             }
         }
@@ -107,7 +107,7 @@ impl InstallCmd {
     }
     pub fn install_target(
         &self,
-        install_target: InstallTarget,
+        install_target: &InstallTarget,
         dirs: &Dirs,
         pkg_info: &mut PackageInfo,
         pkg_already_installed: bool,
@@ -119,7 +119,7 @@ impl InstallCmd {
             templating,
             replace,
         } = &install_target;
-        let destination = append_destdir(destination, &self.destdir.as_deref());
+        let destination = append_destdir(destination, self.destdir.as_deref());
 
         ensure!(source.exists(), "{:?} does not exist", source);
 
@@ -146,10 +146,10 @@ impl InstallCmd {
             }
             println!(
                 "{} {} {} {}",
-                if !self.accept_changes {
-                    "Would install:"
-                } else {
+                if self.accept_changes {
                     "Installing"
+                } else {
+                    "Would install:"
                 },
                 path_to_str!(source.strip_prefix(package_dir).unwrap_or(source))
                     .yellow()
@@ -172,11 +172,12 @@ impl InstallCmd {
                         format!("unable to copy file {:?} to {:?}", source, destination)
                     })?;
                 }
-                let dest_wo_destdir = if let Some(destdir) = &self.destdir {
-                    destination.strip_prefix(destdir).unwrap()
-                } else {
-                    &destination
-                };
+                let dest_wo_destdir = &self
+                    .destdir
+                    .as_ref()
+                    .map_or(destination.as_path(), |destdir| {
+                        destination.strip_prefix(&destdir).unwrap()
+                    });
                 pkg_info.add_file(&destination, dest_wo_destdir, *replace)?;
             }
         } else if source.is_dir() {
@@ -207,10 +208,10 @@ impl InstallCmd {
                     }
                     println!(
                         "{} {} {} {}",
-                        if !self.accept_changes {
-                            "Would install:"
-                        } else {
+                        if self.accept_changes {
                             "Installing"
+                        } else {
+                            "Would install:"
                         },
                         path_to_str!(source
                             .strip_prefix(&self.package_dir.as_ref().unwrap())
@@ -257,19 +258,17 @@ impl InstallCmd {
     ) -> Result<bool> {
         if destination.exists() && replace {
             if !self.force {
-                if !self.accept_changes {
-                    if !pkg_already_installed {
-                        eprintln!(
-                            "{} file {} already exists, add {} to overwrite it",
-                            "WARNING:".red().italic(),
-                            path_to_str!(destination).yellow().bold(),
-                            "--force".bright_black().italic(),
-                        );
-                    }
-                } else {
+                if self.accept_changes {
                     bail!(
                         "file {:?} already exists, add --force to overwrite it",
                         destination
+                    );
+                } else if !pkg_already_installed {
+                    eprintln!(
+                        "{} file {} already exists, add {} to overwrite it",
+                        "WARNING:".red().italic(),
+                        path_to_str!(destination).yellow().bold(),
+                        "--force".bright_black().italic(),
                     );
                 }
             } else if !self.accept_changes {
@@ -288,17 +287,15 @@ impl InstallCmd {
         }
         if destination.exists() && !replace {
             if self.update_config {
-                if !self.accept_changes {
-                    if !pkg_already_installed {
-                        eprintln!(
-                            "{} config {} will be overwritten",
-                            "WARNING:".red().italic(),
-                            path_to_str!(destination)
-                        );
-                    }
-                } else {
+                if self.accept_changes {
                     eprintln!(
                         "{} config {} is being overwritten",
+                        "WARNING:".red().italic(),
+                        path_to_str!(destination)
+                    );
+                } else if !pkg_already_installed {
+                    eprintln!(
+                        "{} config {} will be overwritten",
                         "WARNING:".red().italic(),
                         path_to_str!(destination)
                     );
@@ -306,10 +303,10 @@ impl InstallCmd {
             } else {
                 println!(
                     "{} config {} {} {}",
-                    if !self.accept_changes {
-                        "Would skip"
-                    } else {
+                    if self.accept_changes {
                         "Skipping"
+                    } else {
+                        "Would skip"
                     },
                     path_to_str!(source
                         .strip_prefix(&self.package_dir.as_ref().unwrap())

@@ -17,7 +17,7 @@ macro_rules! path_to_str {
 
 pub fn append_destdir(
     destination: &Path,
-    destdir: &Option<&str>,
+    destdir: Option<&str>,
 ) -> PathBuf {
     destdir.map_or(destination.to_owned(), |destdir| {
         // join does not work when the argument (not the self) is an absolute path

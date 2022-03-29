@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::Path};
 
 use clap::Parser;
 use color_eyre::Result;
@@ -10,7 +10,7 @@ include!("generate_rpm_files.rs");
 impl GenerateRpmFiles {
     pub fn run(
         self,
-        package_dir: PathBuf,
+        package_dir: &Path,
         install_spec: InstallSpec,
         dirs: Dirs,
     ) -> Result<()> {
@@ -21,7 +21,7 @@ impl GenerateRpmFiles {
         for package in packages {
             let targets = package.targets(
                 &dirs,
-                Project::new_from_type(
+                &Project::new_from_type(
                     Type::Default,
                     package_dir.to_path_buf(),
                     false,

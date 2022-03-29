@@ -18,8 +18,8 @@ pub struct InstallEntry {
 }
 
 impl InstallEntry {
-    pub fn new_with_source(source: PathBuf) -> Self {
-        InstallEntry {
+    pub const fn new_with_source(source: PathBuf) -> Self {
+        Self {
             source,
             destination: None,
             templating: false,
@@ -33,7 +33,7 @@ impl FromStr for InstallEntry {
     type Err = Void;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(InstallEntry::new_with_source(PathBuf::from(s)))
+        Ok(Self::new_with_source(PathBuf::from(s)))
     }
 }
 

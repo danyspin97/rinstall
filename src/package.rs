@@ -117,7 +117,7 @@ impl Package {
     pub fn targets(
         self,
         dirs: &Dirs,
-        project: Project,
+        project: &Project,
         rinstall_version: &Version,
         system_install: bool,
     ) -> Result<Vec<InstallTarget>> {

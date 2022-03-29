@@ -30,7 +30,7 @@ impl Dirs {
     pub fn new(
         dirs_config: DirsConfig,
         system: bool,
-    ) -> Result<Dirs> {
+    ) -> Result<Self> {
         let mut dirs = Self {
             prefix: dirs_config.prefix.map(PathBuf::from),
             exec_prefix: dirs_config.exec_prefix.map(PathBuf::from),
