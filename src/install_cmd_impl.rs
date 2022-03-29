@@ -73,7 +73,8 @@ impl InstallCmd {
             if !self.skip_pkg_info {
                 if !self.accept_changes {
                     println!(
-                        "Would install installation data in {}",
+                        "Would install {} in {}",
+                        "pkginfo".yellow().bold(),
                         pkg_info
                             .path
                             .to_str()
@@ -86,7 +87,8 @@ impl InstallCmd {
                     );
                 } else {
                     println!(
-                        "Installing installation data in {}",
+                        "Installing {} in {}",
+                        "pkginfo".yellow().bold(),
                         pkg_info_path
                             .to_str()
                             .with_context(|| format!(
