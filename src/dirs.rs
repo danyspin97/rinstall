@@ -50,10 +50,11 @@ impl Dirs {
             systemd_unitsdir: PathBuf::from(dirs_config.systemd_unitsdir.unwrap()),
         };
 
-        if !system {
+        if system {
+            dirs.check_absolute_paths()?;
+        } else {
             dirs.append_home();
         }
-        dirs.check_absolute_paths()?;
 
         Ok(dirs)
     }
