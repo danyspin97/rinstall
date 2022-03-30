@@ -1,4 +1,4 @@
-#[derive(Parser, Clone)]
+#[derive(Args, Clone)]
 pub struct InstallCmd {
     #[clap(from_global)]
     pub system: bool,

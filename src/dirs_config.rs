@@ -1,6 +1,4 @@
-use serde::Deserialize;
-
-#[derive(Parser, Deserialize, Clone)]
+#[derive(Args, Deserialize, Clone)]
 pub struct DirsConfig {
     #[clap(long, requires = "system")]
     pub prefix: Option<String>,

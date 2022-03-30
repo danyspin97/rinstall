@@ -5,6 +5,9 @@ use std::fs::File;
 use std::io::Error;
 use std::path::Path;
 
+use clap::{Args, Parser, Subcommand};
+use serde::Deserialize;
+
 include!("src/dirs_config.rs");
 include!("src/generate_rpm_files.rs");
 include!("src/install_cmd.rs");

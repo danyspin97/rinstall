@@ -1,8 +1,9 @@
-use clap::Parser;
+use clap::Args;
 use color_eyre::{
     eyre::{ContextCompat, WrapErr},
     Result,
 };
+use serde::Deserialize;
 use xdg::BaseDirectories;
 
 include!("dirs_config.rs");

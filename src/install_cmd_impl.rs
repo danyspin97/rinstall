@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use clap::Parser;
+use clap::Args;
 use color_eyre::{
     eyre::{bail, ensure, Context, ContextCompat},
     Result,
@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 
 use crate::{
     dirs::Dirs,
+    dirs_config_impl::DirsConfig,
     install_spec::InstallSpec,
     install_target::InstallTarget,
     package_info::PackageInfo,

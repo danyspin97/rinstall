@@ -1,5 +1,3 @@
-use clap::Parser;
-
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Danilo Spinella <oss@danyspin97.org>")]
 pub struct Config {
@@ -40,7 +38,7 @@ pub struct Config {
     pub install: InstallCmd,
 }
 
-#[derive(Parser)]
+#[derive(Subcommand)]
 pub enum SubCommand {
     Install(InstallCmd),
     Uninstall(Uninstall),
