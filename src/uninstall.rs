@@ -1,6 +1,12 @@
 #[derive(Parser, Clone)]
 pub struct Uninstall {
-    pkg_name: String,
+    #[clap(
+        short,
+        long,
+        help = "Path to the rinstall.yml configuration",
+        global = true
+    )]
+    pub config: Option<String>,
     #[clap(
         short = 'y',
         long = "yes",
@@ -9,4 +15,19 @@ pub struct Uninstall {
     accept_changes: bool,
     #[clap(short = 'f', long = "force", help = "Force the uninstallation")]
     force: bool,
+    #[clap(
+        long = "system",
+        help = "Perform a system-wide uninstallation",
+        global = true
+    )]
+    pub system: bool,
+    #[clap(long, requires = "system", global = true)]
+    pub prefix: Option<String>,
+    #[clap(long, global = true)]
+    pub localstatedir: Option<String>,
+    #[clap(
+        help = "The names or pkginfo files of the packages to remove",
+        required = true
+    )]
+    packages: Vec<String>,
 }

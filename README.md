@@ -59,7 +59,7 @@ If the project has an `install.yml` file present, either in the root directory o
 Run rinstall as your user to see the changes that will be done to the filesystem:
 
 ```
-$ rinstall install --system
+$ rinstall install
 ```
 
 After having reviewed the changes, add `-y` or `--yes` to perform an user installation:
@@ -68,27 +68,19 @@ After having reviewed the changes, add `-y` or `--yes` to perform an user instal
 $ rinstall install -y
 ```
 
-The same apply for performing a system-wide installation. Run **rinstall** as root and it
-automatically switch to system-wide mode. To list the changes made to the filesystem,
-run **rinstall without any arguments:
-
-```
-# rinstall install
-```
-
-To accept the changes, run again the command and append `-y` or `--yes`:
-
-```
-# rinstall install -y
-```
-
-You can also review the changes of a system-wide installation while running **rinstall** as
-a non-privileged user:
+The same apply for performing a system-wide installation, enabled by adding `--system` flag.
+To list the changes made to the filesystem, run **rinstall** like this:
 
 ```
 $ rinstall install --system
 ```
 
+To accept the changes, run again the command and append `-y` or `--yes`. You need to run
+the command as root to apply the changes to the filestem.
+
+```
+# rinstall install --system -y
+```
 
 ## Configuration
 

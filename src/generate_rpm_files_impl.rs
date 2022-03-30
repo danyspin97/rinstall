@@ -1,19 +1,20 @@
-use std::{collections::HashSet, path::Path};
+use std::collections::HashSet;
 
 use clap::Parser;
-use color_eyre::Result;
+use color_eyre::{eyre::WrapErr, Result};
 
-use crate::{dirs::Dirs, install_spec::InstallSpec, package::Type, project::Project};
+use crate::{
+    dirs::Dirs, dirs_config_impl::DirsConfig, install_spec::InstallSpec, package::Type,
+    project::Project,
+};
 
 include!("generate_rpm_files.rs");
 
 impl GenerateRpmFiles {
-    pub fn run(
-        self,
-        package_dir: &Path,
-        install_spec: InstallSpec,
-        dirs: Dirs,
-    ) -> Result<()> {
+    pub fn run(self) -> Result<()> {
+        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &self.dirs)?;
+        let dirs = Dirs::new(dirs_config, self.system).context("unable to create dirs")?;
+        let install_spec = InstallSpec::new_from_path(&self.package_dir)?;
         let version = install_spec.version.clone();
         let packages = install_spec.packages(&self.packages);
         let mut rpm_files = Vec::new();
@@ -23,7 +24,7 @@ impl GenerateRpmFiles {
                 &dirs,
                 &Project::new_from_type(
                     Type::Default,
-                    package_dir.to_path_buf(),
+                    &self.package_dir,
                     false,
                     false,
                     // opts.rust_debug_target,

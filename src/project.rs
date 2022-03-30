@@ -23,20 +23,20 @@ use crate::package::Type;
 impl Project {
     pub fn new_from_type(
         project_type: Type,
-        projectdir: PathBuf,
+        projectdir: &Path,
         is_release_tarball: bool,
         rust_debug_target: bool,
     ) -> Result<Self> {
         Ok(Self {
             outputdir: if is_release_tarball {
-                projectdir.clone()
+                projectdir.to_path_buf()
             } else {
                 match project_type {
-                    Type::Rust => get_target_dir_for_rust(&projectdir, rust_debug_target)?,
-                    Type::Default | Type::Custom => projectdir.clone(),
+                    Type::Rust => get_target_dir_for_rust(projectdir, rust_debug_target)?,
+                    Type::Default | Type::Custom => projectdir.to_path_buf(),
                 }
             },
-            projectdir,
+            projectdir: projectdir.to_path_buf(),
         })
     }
 }

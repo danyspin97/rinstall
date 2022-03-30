@@ -1,10 +1,18 @@
+use std::{fs, path::PathBuf};
+
 use clap::Args;
 use color_eyre::{
-    eyre::{ContextCompat, WrapErr},
+    eyre::{ensure, ContextCompat, WrapErr},
     Result,
 };
 use serde::Deserialize;
 use xdg::BaseDirectories;
+
+lazy_static! {
+    static ref XDG: BaseDirectories = BaseDirectories::new()
+        .context("unable to initialize XDG Base Directories")
+        .unwrap();
+}
 
 include!("dirs_config.rs");
 
@@ -19,6 +27,39 @@ macro_rules! update_fields {
 }
 
 impl DirsConfig {
+    pub fn load(
+        config: Option<&str>,
+        system: bool,
+        opts: &Self,
+    ) -> Result<Self> {
+        let mut dirs_config = if system {
+            Self::system_config()
+        } else {
+            Self::user_config()
+        };
+
+        let config_file = if let Some(config_file) = config {
+            let config_file = PathBuf::from(config_file);
+            ensure!(config_file.exists(), "config file does not exist");
+            config_file
+        } else if system {
+            PathBuf::from("/etc/rinstall.yml")
+        } else {
+            XDG.place_config_file("rinstall.yml")?
+        };
+        if config_file.exists() {
+            let config_from_file = serde_yaml::from_str(
+                &fs::read_to_string(&config_file)
+                    .with_context(|| format!("unable to read file {:?}", config_file))?,
+            )?;
+            dirs_config.merge(system, config_from_file);
+        }
+        dirs_config.merge(system, opts.clone());
+        dirs_config.replace_placeholders(system)?;
+
+        Ok(dirs_config)
+    }
+
     #[must_use]
     pub fn system_config() -> Self {
         Self {
@@ -63,7 +104,19 @@ impl DirsConfig {
         }
     }
 
-    pub fn merge_root_conf(
+    pub fn merge(
+        &mut self,
+        system: bool,
+        other: Self,
+    ) {
+        if system {
+            self.merge_root_conf(other);
+        } else {
+            self.merge_user_conf(other);
+        }
+    }
+
+    fn merge_root_conf(
         &mut self,
         config: Self,
     ) {
@@ -89,7 +142,7 @@ impl DirsConfig {
         );
     }
 
-    pub fn merge_user_conf(
+    fn merge_user_conf(
         &mut self,
         config: Self,
     ) {
@@ -108,7 +161,21 @@ impl DirsConfig {
         );
     }
 
-    pub fn replace_root_placeholders(&mut self) {
+    pub fn replace_placeholders(
+        &mut self,
+        system: bool,
+    ) -> Result<()> {
+        if system {
+            self.replace_root_placeholders();
+        } else {
+            self.replace_user_placeholders(&XDG)
+                .context("unable to sanitize user directories")?;
+        }
+
+        Ok(())
+    }
+
+    fn replace_root_placeholders(&mut self) {
         macro_rules! replace {
             ( $replacement:ident, $needle:literal, $($var:ident),* ) => {
                 $(
@@ -153,7 +220,7 @@ impl DirsConfig {
         replace!(libdir, "@libdir@", pam_modulesdir, systemd_unitsdir);
     }
 
-    pub fn replace_user_placeholders(
+    fn replace_user_placeholders(
         &mut self,
         xdg: &BaseDirectories,
     ) -> Result<()> {

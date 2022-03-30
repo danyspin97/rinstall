@@ -1,8 +1,23 @@
 #[derive(Args, Clone)]
 pub struct InstallCmd {
-    #[clap(from_global)]
+    #[clap(
+        short,
+        long,
+        help = "Path to the rinstall.yml configuration",
+        from_global
+    )]
+    pub config: Option<String>,
+    #[clap(
+        long = "system",
+        help = "Perform a system-wide installation",
+        global = true
+    )]
     pub system: bool,
-    #[clap(from_global)]
+    #[clap(
+        short = 'y',
+        long = "yes",
+        help = "Accept the changes and perform the installation"
+    )]
     pub accept_changes: bool,
     #[clap(
         short = 'f',
@@ -29,9 +44,19 @@ pub struct InstallCmd {
         help = "Skip the installation of rinstall pkginfo, used for uninstallation"
     )]
     pub skip_pkg_info: bool,
-    #[clap(from_global)]
-    pub package_dir: Option<String>,
-    #[clap(from_global)]
+    #[clap(
+        short = 'P',
+        long,
+        help = "Path to the directory containing the project to install",
+        default_value_os_t = std::env::current_dir()
+            .expect("unable to get current directory"),
+    )]
+    pub package_dir: std::path::PathBuf,
+    #[clap(
+        short = 'p',
+        long = "pkgs",
+        help = "List of packages to install, separated by a comma"
+    )]
     pub packages: Vec<String>,
     #[clap(flatten)]
     pub dirs: DirsConfig,

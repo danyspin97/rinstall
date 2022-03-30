@@ -23,20 +23,19 @@ use crate::{
 include!("install_cmd.rs");
 
 impl InstallCmd {
-    pub fn run(
-        self,
-        package_dir: &Path,
-        install_spec: InstallSpec,
-        dirs: &Dirs,
-    ) -> Result<()> {
+    pub fn run(self) -> Result<()> {
+        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &self.dirs)?;
+        let dirs = Dirs::new(dirs_config, self.system).context("unable to create dirs")?;
+        let install_spec = InstallSpec::new_from_path(&self.package_dir)?;
+
         // Check if the projectdir is a release tarball instead of the
         // directory containing the source code
-        let is_release_tarball = package_dir.join(".tarball").exists();
+        let is_release_tarball = self.package_dir.join(".tarball").exists();
         let version = install_spec.version.clone();
 
         let packages = install_spec.packages(&self.packages);
         for package in packages {
-            let mut pkg_info = PackageInfo::new(package.name.as_ref().unwrap(), dirs);
+            let mut pkg_info = PackageInfo::new(package.name.as_ref().unwrap(), &dirs);
             let pkg_info_path = append_destdir(&pkg_info.path, self.destdir.as_deref());
             let pkg_already_installed = pkg_info_path.exists();
             println!(
@@ -54,21 +53,15 @@ impl InstallCmd {
             let project_type = package.project_type.clone();
             let project = Project::new_from_type(
                 project_type,
-                package_dir.to_path_buf(),
+                &self.package_dir,
                 is_release_tarball,
                 self.rust_debug_target,
             )?;
 
-            let targets = package.targets(dirs, &project, &version, self.system)?;
+            let targets = package.targets(&dirs, &project, &version, self.system)?;
 
             for target in targets {
-                self.install_target(
-                    &target,
-                    dirs,
-                    &mut pkg_info,
-                    pkg_already_installed,
-                    package_dir,
-                )?;
+                self.install_target(&target, &dirs, &mut pkg_info, pkg_already_installed)?;
             }
 
             if !self.skip_pkg_info {
@@ -112,7 +105,6 @@ impl InstallCmd {
         dirs: &Dirs,
         pkg_info: &mut PackageInfo,
         pkg_already_installed: bool,
-        package_dir: &Path,
     ) -> Result<()> {
         let InstallTarget {
             source,
@@ -152,9 +144,11 @@ impl InstallCmd {
                 } else {
                     "Would install:"
                 },
-                path_to_str!(source.strip_prefix(package_dir).unwrap_or(source))
-                    .yellow()
-                    .bold(),
+                path_to_str!(source
+                    .strip_prefix(self.package_dir.as_path())
+                    .unwrap_or(source))
+                .yellow()
+                .bold(),
                 "->".purple(),
                 path_to_str!(destination).cyan().bold()
             );
@@ -214,11 +208,9 @@ impl InstallCmd {
                         } else {
                             "Would install:"
                         },
-                        path_to_str!(source
-                            .strip_prefix(&self.package_dir.as_ref().unwrap())
-                            .unwrap_or(&source))
-                        .yellow()
-                        .bold(),
+                        path_to_str!(source.strip_prefix(&self.package_dir).unwrap_or(&source))
+                            .yellow()
+                            .bold(),
                         "->".purple(),
                         path_to_str!(destination).cyan().bold()
                     );
@@ -309,11 +301,9 @@ impl InstallCmd {
                     } else {
                         "Would skip"
                     },
-                    path_to_str!(source
-                        .strip_prefix(&self.package_dir.as_ref().unwrap())
-                        .unwrap_or(source))
-                    .yellow()
-                    .bold(),
+                    path_to_str!(source.strip_prefix(&self.package_dir).unwrap_or(source))
+                        .yellow()
+                        .bold(),
                     "->".purple(),
                     path_to_str!(destination).cyan().bold()
                 );
