@@ -34,8 +34,6 @@ pub struct Config {
     pub system: bool,
     #[clap(flatten)]
     pub dirs: DirsConfig,
-    #[clap(flatten)]
-    pub install: InstallCmd,
 }
 
 #[derive(Subcommand)]

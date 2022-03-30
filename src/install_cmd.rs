@@ -33,4 +33,6 @@ pub struct InstallCmd {
     pub package_dir: Option<String>,
     #[clap(from_global)]
     pub packages: Vec<String>,
+    #[clap(flatten)]
+    pub dirs: DirsConfig,
 }
