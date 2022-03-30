@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use color_eyre::Result;
+use color_eyre::{eyre::ensure, Result};
 
 use crate::DirsConfig;
 
@@ -83,7 +83,71 @@ impl Dirs {
         );
     }
 
+    /// Check that all paths are absolute
     fn check_absolute_paths(&self) -> Result<()> {
+        macro_rules! check_abs_path_impl {
+            ($var:expr, $name:tt) => {
+                ensure!(
+                    $var.is_absolute(),
+                    "{}, with path '{}', is not an absolute path",
+                    $name,
+                    $var.to_str().unwrap()
+                );
+            };
+        }
+        macro_rules! check_abs_path {
+            ( $($var:ident, $name:tt),* ) => {
+                $(
+                    check_abs_path_impl!(self.$var, $name);
+                )*
+            };
+        }
+        macro_rules! check_abs_path_opt {
+            ( $($var:ident, $name:tt),* ) => {
+                $(
+                    if let Some(ref path) = self.$var {
+                        check_abs_path_impl!(path, $name);
+                    }
+                )*
+            };
+        }
+
+        check_abs_path!(
+            bindir,
+            "bindir",
+            libdir,
+            "libdir",
+            libexecdir,
+            "libexecdir",
+            datarootdir,
+            "datarootdir",
+            datadir,
+            "datadir",
+            sysconfdir,
+            "sysconfdir",
+            localstatedir,
+            "localstatedir",
+            runstatedir,
+            "runstatedir",
+            systemd_unitsdir,
+            "systemd-unitsdir"
+        );
+
+        check_abs_path_opt!(
+            prefix,
+            "prefix",
+            exec_prefix,
+            "exec_prefix",
+            includedir,
+            "includedir",
+            docdir,
+            "docdir",
+            mandir,
+            "mandir",
+            pam_modulesdir,
+            "pam_modulesdir"
+        );
+
         Ok(())
     }
 }
