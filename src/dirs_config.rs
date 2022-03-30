@@ -2,9 +2,9 @@ use serde::Deserialize;
 
 #[derive(Parser, Deserialize, Clone)]
 pub struct DirsConfig {
-    #[clap(long)]
+    #[clap(long, requires = "system")]
     pub prefix: Option<String>,
-    #[clap(long)]
+    #[clap(long, requires = "system")]
     pub exec_prefix: Option<String>,
     #[clap(long)]
     pub bindir: Option<String>,
