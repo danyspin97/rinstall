@@ -79,7 +79,8 @@ impl Dirs {
             datadir,
             sysconfdir,
             localstatedir,
-            runstatedir
+            runstatedir,
+            systemd_unitsdir
         );
     }
 
