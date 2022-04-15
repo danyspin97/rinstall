@@ -24,9 +24,4 @@ pub enum SubCommand {
     Install(InstallCmd),
     #[clap(about = "Uninstall the packages from the system")]
     Uninstall(Uninstall),
-    #[clap(
-        name = "rpm-files",
-        about = "Generate the list of rpm files that would be installed by the package"
-    )]
-    GenerateRpmFiles(GenerateRpmFiles),
 }

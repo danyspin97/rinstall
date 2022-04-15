@@ -9,7 +9,6 @@
   + `user-config` will be installed as docs in system-wide installations
   + Move default command to an install subcommand
 * Add colored output
-* Add `rpm-files` command
 * Add new `--rust-debug-target` flag
 * Small improvements to dry mode and warnings
 * Improved README.md documentation

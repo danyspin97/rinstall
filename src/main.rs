@@ -1,7 +1,6 @@
 mod config_impl;
 mod dirs;
 mod dirs_config_impl;
-mod generate_rpm_files_impl;
 mod icon;
 mod install_cmd_impl;
 mod install_entry;
@@ -23,7 +22,6 @@ use color_eyre::Result;
 pub use config_impl::{Config, SubCommand};
 use dirs::Dirs;
 pub use dirs_config_impl::DirsConfig;
-pub use generate_rpm_files_impl::GenerateRpmFiles;
 pub use install_cmd_impl::InstallCmd;
 use package::Package;
 pub use uninstall_impl::Uninstall;
@@ -37,9 +35,6 @@ fn main() -> Result<()> {
     match opts.subcmd {
         SubCommand::Uninstall(uninstall) => {
             uninstall.run()?;
-        }
-        SubCommand::GenerateRpmFiles(generate_rpm) => {
-            generate_rpm.run()?;
         }
         SubCommand::Install(install) => install.run()?,
     }
