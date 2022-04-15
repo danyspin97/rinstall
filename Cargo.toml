@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 blake3 = "1.3.1"
-clap = { version = "3.1.6", features = ["derive", "wrap_help"] }
+clap = { version = "3.1.6", features = ["derive", "env", "wrap_help"] }
 color-eyre = "0.6.1"
 colored = "2.0.0"
 json = "0.12.4"

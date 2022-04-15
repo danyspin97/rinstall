@@ -21,13 +21,28 @@ pub struct Uninstall {
         global = true
     )]
     pub system: bool,
-    #[clap(long, requires = "system", global = true)]
+    #[clap(
+        long,
+        env,
+        requires = "system",
+        global = true,
+        help = concat!("A prefix used in constructing the default values of the directories",
+                       " listed below. (system only)",
+                       " [default: /usr/local]")
+    )]
     pub prefix: Option<String>,
-    #[clap(long, global = true)]
+    #[clap(
+        long,
+        env,
+        global = true, 
+        help = concat!("A prefix used in constructing the default values of the directories",
+                       " listed below. (system only)",
+                       " [default: /usr/local]")
+    )]
     pub localstatedir: Option<String>,
     #[clap(
         help = "The names or pkginfo files of the packages to remove",
-        required = true
+        required = true,
     )]
     packages: Vec<String>,
 }

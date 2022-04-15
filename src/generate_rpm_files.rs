@@ -9,9 +9,12 @@ pub struct GenerateRpmFiles {
     pub config: Option<String>,
     #[clap(long)]
     pub system: bool,
-    #[clap(from_global)]
+    #[clap(
+        long,
+        help = "List of packages to generate the rpm %files list for, separated by a comma"
+    )]
     pub packages: Vec<String>,
-    #[clap(flatten)]
+    #[clap(flatten, next_help_heading = "DIRECTORIES")]
     pub dirs: DirsConfig,
     #[clap(
         short = 'P',

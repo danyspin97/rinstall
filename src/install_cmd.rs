@@ -37,7 +37,13 @@ pub struct InstallCmd {
         help = "Use the generated binaries and libraries from the debug profile (only effective for rust projects)"
     )]
     pub rust_debug_target: bool,
-    #[clap(short = 'D', long, requires = "system")]
+    #[clap(
+        short = 'D',
+        long,
+        requires = "system",
+        help = "Install all the files relative to this directory",
+        env
+    )]
     pub destdir: Option<String>,
     #[clap(
         long = "skip-pkginfo",
@@ -58,6 +64,6 @@ pub struct InstallCmd {
         help = "List of packages to install, separated by a comma"
     )]
     pub packages: Vec<String>,
-    #[clap(flatten)]
+    #[clap(flatten, next_help_heading = "DIRECTORIES")]
     pub dirs: DirsConfig,
 }
