@@ -11,26 +11,26 @@ use serde::Deserialize;
 include!("src/dirs_config.rs");
 include!("src/install_cmd.rs");
 include!("src/uninstall.rs");
-include!("src/config.rs");
+include!("src/opts.rs");
 
 fn build_shell_completion(outdir: &Path) -> Result<(), Error> {
-    let mut app = Config::command();
+    let mut opts = Opts::command();
     let shells = Shell::value_variants();
 
     for shell in shells {
-        generate_to(*shell, &mut app, "rinstall", &outdir)?;
+        generate_to(*shell, &mut opts, "rinstall", &outdir)?;
     }
 
     Ok(())
 }
 
 fn build_manpages(outdir: &Path) -> Result<(), Error> {
-    let app = Config::command();
+    let opts = Opts::command();
 
     let file = Path::new(&outdir).join("rinstall.1");
     let mut file = File::create(&file)?;
 
-    Man::new(app).render(&mut file)?;
+    Man::new(opts).render(&mut file)?;
 
     Ok(())
 }

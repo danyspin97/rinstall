@@ -6,7 +6,7 @@
     long_about = "A helper tool that installs software and additional data into the system",
     global_setting(clap::AppSettings::DeriveDisplayOrder)
 )]
-pub struct Config {
+pub struct Opts {
     #[clap(
         short,
         long,

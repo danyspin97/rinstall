@@ -1,4 +1,3 @@
-mod config_impl;
 mod dirs;
 mod dirs_config_impl;
 mod icon;
@@ -6,6 +5,7 @@ mod install_cmd_impl;
 mod install_entry;
 mod install_spec;
 mod install_target;
+mod opts_impl;
 mod package;
 mod package_info;
 mod project;
@@ -19,16 +19,16 @@ extern crate lazy_static;
 use clap::Parser;
 use color_eyre::Result;
 
-pub use config_impl::{Config, SubCommand};
 use dirs::Dirs;
 pub use dirs_config_impl::DirsConfig;
 pub use install_cmd_impl::InstallCmd;
+pub use opts_impl::{Opts, SubCommand};
 use package::Package;
 pub use uninstall_impl::Uninstall;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    let opts = Config::parse();
+    let opts = Opts::parse();
     // let uid = unsafe { libc::getuid() };
     // let system_install = if uid == 0 { true } else { opts.system };
 
