@@ -1,7 +1,14 @@
 [package]
 name = "rinstall"
-version = "0.1.0"
-edition = "2018"
+version = "0.2.0"
+edition = "2021"
+license = "GPL-3.0+"
+authors = ["Danilo Spinella <danilo.spinella@suse.com>"]
+keywords = ["packaging"]
+repository = "https://github.com/danyspin97/rinstall"
+homepage = "https://github.com/danyspin97/rinstall"
+description = "Declarative install for programs"
+categories = ["command-line-utilities"]
 
 [dependencies]
 blake3 = "1.3.1"
