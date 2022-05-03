@@ -1,10 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use color_eyre::{
-    eyre::{ensure, Context, ContextCompat},
+    eyre::{ensure, ContextCompat},
     Result,
 };
-use walkdir::WalkDir;
 
 use crate::install_entry::InstallEntry;
 
