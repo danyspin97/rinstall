@@ -630,7 +630,8 @@ rinstall can revert the installation of a package:
 
 ```bash
 $ rinstall uninstall foo
-Would remove "/usr/bin/foo"
+Would remove "/usr/local/bin/foo"
+Would remove "/usr/local/var/lib/rinstall/foo.pkg"
 ```
 
 ## License
