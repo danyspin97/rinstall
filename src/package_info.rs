@@ -1,8 +1,6 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::fs;
 
+use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::{eyre::Context, Result};
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +11,7 @@ use crate::{
 
 #[derive(Serialize, Deserialize)]
 pub struct InstalledFile {
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
     pub checksum: String,
     pub replace: bool,
 }
@@ -34,7 +32,7 @@ impl InstalledFile {
 pub struct PackageInfo {
     #[serde(skip)]
     pub pkg_name: String,
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
     pub files: Vec<InstalledFile>,
 }
 
@@ -55,12 +53,12 @@ impl PackageInfo {
 
     pub fn add_file(
         &mut self,
-        path: &Path,
-        installed_path: &Path,
+        path: &Utf8Path,
+        installed_path: &Utf8Path,
         replace: bool,
     ) -> Result<()> {
         let file = InstalledFile {
-            path: Path::new("/").join(installed_path),
+            path: Utf8Path::new("/").join(installed_path),
             checksum: blake3::hash(
                 &fs::read(path).with_context(|| format!("unable to read file {:?}", path))?,
             )

@@ -1,5 +1,6 @@
-use std::{fs, path::PathBuf};
+use std::fs;
 
+use camino::Utf8PathBuf;
 use clap::Args;
 use color_eyre::{
     eyre::{ensure, ContextCompat, WrapErr},
@@ -39,13 +40,13 @@ impl DirsConfig {
         };
 
         let config_file = if let Some(config_file) = config {
-            let config_file = PathBuf::from(config_file);
+            let config_file = Utf8PathBuf::from(config_file);
             ensure!(config_file.exists(), "config file does not exist");
             config_file
         } else if system {
-            PathBuf::from("/etc/rinstall.yml")
+            Utf8PathBuf::from("/etc/rinstall.yml")
         } else {
-            XDG.place_config_file("rinstall.yml")?
+            Utf8PathBuf::from_path_buf(XDG.place_config_file("rinstall.yml")?).unwrap()
         };
         if config_file.exists() {
             let config_from_file = serde_yaml::from_str(

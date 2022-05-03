@@ -1,3 +1,8 @@
+#![deny(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![warn(clippy::cargo)]
+
 mod dirs;
 mod dirs_config_impl;
 mod icon;
@@ -29,8 +34,6 @@ pub use uninstall_impl::Uninstall;
 fn main() -> Result<()> {
     color_eyre::install()?;
     let opts = Opts::parse();
-    // let uid = unsafe { libc::getuid() };
-    // let system_install = if uid == 0 { true } else { opts.system };
 
     match opts.subcmd {
         SubCommand::Uninstall(uninstall) => {

@@ -1,5 +1,4 @@
-use std::path::{Path, PathBuf};
-
+use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::{
     eyre::{ensure, ContextCompat},
     Result,
@@ -8,8 +7,8 @@ use color_eyre::{
 use crate::install_entry::InstallEntry;
 
 pub struct InstallTarget {
-    pub source: PathBuf,
-    pub destination: PathBuf,
+    pub source: Utf8PathBuf,
+    pub destination: Utf8PathBuf,
     pub templating: bool,
     pub replace: bool,
 }
@@ -17,8 +16,8 @@ pub struct InstallTarget {
 impl InstallTarget {
     pub fn new(
         entry: InstallEntry,
-        install_dir: &Path,
-        parent_dir: &Path,
+        install_dir: &Utf8Path,
+        parent_dir: &Utf8Path,
         is_repleaceable: bool,
     ) -> Result<Self> {
         let full_source = parent_dir.join(&entry.source);
@@ -31,7 +30,7 @@ impl InstallTarget {
                     );
                     destination
                 } else {
-                    PathBuf::from(entry.source.file_name().with_context(|| {
+                    Utf8PathBuf::from(entry.source.file_name().with_context(|| {
                         format!("unable to get file name from {:?}", entry.source)
                     })?)
                 })

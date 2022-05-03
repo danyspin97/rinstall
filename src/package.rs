@@ -1,5 +1,4 @@
-use std::path::{Path, PathBuf};
-
+use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::{
     eyre::{ensure, Context, ContextCompat},
     Result,
@@ -16,7 +15,7 @@ use crate::Dirs;
 
 static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
 
-#[derive(Deserialize, Clone, PartialEq)]
+#[derive(Deserialize, Clone, PartialEq, Debug)]
 pub enum Type {
     #[serde(rename(deserialize = "default"))]
     Default,
@@ -218,28 +217,13 @@ impl Package {
                     .map(|entry| -> Result<InstallTarget> {
                         let Entry::InstallEntry(entry) = entry;
                         ensure!(
-                            !entry
-                                .source
-                                .as_os_str()
-                                .to_str()
-                                .with_context(|| format!(
-                                    "unable to convert {:?} to string",
-                                    entry.source
-                                ))?
-                                .ends_with('/'),
+                            !entry.source.as_str().ends_with('/'),
                             "the man entry cannot be a directory"
                         );
-                        let use_source_name = if let Some(destination) = &entry.destination {
-                            destination
-                                .as_os_str()
-                                .to_str()
-                                .with_context(|| {
-                                    format!("unable to convert {:?} to string", entry.source)
-                                })?
-                                .ends_with('/')
-                        } else {
-                            true
-                        };
+                        let use_source_name = entry
+                            .destination
+                            .as_ref()
+                            .map_or(true, |destination| destination.as_str().ends_with('/'));
                         let name = if use_source_name {
                             &entry.source
                         } else {
@@ -248,8 +232,6 @@ impl Package {
                         let man_cat = name
                             .extension()
                             .with_context(|| format!("unable to get extension of file {:?}", name))?
-                            .to_str()
-                            .with_context(|| format!("unable to convert {:?} to string", name))?
                             .to_string();
                         ensure!(
                             man_cat.chars().next().unwrap().is_ascii_digit(),
@@ -264,7 +246,11 @@ impl Package {
         }
 
         if system_install {
-            let pkg_docs = &dirs.docdir.as_ref().unwrap().join(Path::new(&package_name));
+            let pkg_docs = &dirs
+                .docdir
+                .as_ref()
+                .unwrap()
+                .join(Utf8Path::new(&package_name));
             results.extend(get_files!(docs, pkg_docs, &project.projectdir, "docs"));
             results.extend(get_files!(
                 user_config,
@@ -355,15 +341,9 @@ impl Package {
                         let destination = if destination.is_some() {
                             destination
                         } else {
-                            let file_name = source
-                                .file_name()
-                                .with_context(|| {
-                                    format!("unable to get file name of file {:?}", source)
-                                })?
-                                .to_str()
-                                .unwrap();
+                            let file_name = source.file_name().unwrap();
                             if file_name.starts_with("libpam_") {
-                                Some(PathBuf::from(file_name.strip_prefix("lib").unwrap()))
+                                Some(Utf8PathBuf::from(file_name.strip_prefix("lib").unwrap()))
                             } else {
                                 None
                             }
@@ -437,28 +417,13 @@ impl Package {
                     .map(|entry| -> Result<InstallTarget> {
                         let Entry::InstallEntry(entry) = entry;
                         ensure!(
-                            !entry
-                                .source
-                                .as_os_str()
-                                .to_str()
-                                .with_context(|| format!(
-                                    "unable to convert {:?} to string",
-                                    entry.source
-                                ))?
-                                .ends_with('/'),
+                            !entry.source.as_str().ends_with('/'),
                             "the terminfo entry cannot be a directory"
                         );
-                        let use_source_name = if let Some(destination) = &entry.destination {
-                            destination
-                                .as_os_str()
-                                .to_str()
-                                .with_context(|| {
-                                    format!("unable to convert {:?} to string", entry.source)
-                                })?
-                                .ends_with('/')
-                        } else {
-                            true
-                        };
+                        let use_source_name = entry
+                            .destination
+                            .as_ref()
+                            .map_or(true, |destination| destination.as_str().ends_with('/'));
                         let name = if use_source_name {
                             &entry.source
                         } else {
@@ -467,8 +432,6 @@ impl Package {
                         let initial = name
                             .file_name()
                             .with_context(|| format!("unable to get filename of file {:?}", name))?
-                            .to_str()
-                            .with_context(|| format!("unable to convert {:?} to string", name))?
                             .chars()
                             .next()
                             .with_context(|| {

@@ -1,5 +1,6 @@
-use std::{fmt, marker::PhantomData, path::PathBuf, str::FromStr};
+use std::{fmt, marker::PhantomData, str::FromStr};
 
+use camino::Utf8PathBuf;
 use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
@@ -10,15 +11,15 @@ use void::Void;
 #[serde(deny_unknown_fields)]
 pub struct InstallEntry {
     #[serde(rename(deserialize = "src"))]
-    pub source: PathBuf,
+    pub source: Utf8PathBuf,
     #[serde(rename(deserialize = "dst"))]
-    pub destination: Option<PathBuf>,
+    pub destination: Option<Utf8PathBuf>,
     #[serde(default, rename(deserialize = "tmpl"))]
     pub templating: bool,
 }
 
 impl InstallEntry {
-    pub const fn new_with_source(source: PathBuf) -> Self {
+    pub const fn new_with_source(source: Utf8PathBuf) -> Self {
         Self {
             source,
             destination: None,
@@ -33,7 +34,7 @@ impl FromStr for InstallEntry {
     type Err = Void;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new_with_source(PathBuf::from(s)))
+        Ok(Self::new_with_source(Utf8PathBuf::from(s)))
     }
 }
 

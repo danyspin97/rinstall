@@ -1,5 +1,6 @@
-use std::{path::PathBuf, str::FromStr};
+use std::str::FromStr;
 
+use camino::Utf8PathBuf;
 use color_eyre::{eyre::ensure, Result};
 use serde::Deserialize;
 use void::Void;
@@ -8,9 +9,9 @@ use void::Void;
 #[serde(deny_unknown_fields)]
 pub struct Icon {
     #[serde(rename(deserialize = "src"))]
-    pub source: PathBuf,
+    pub source: Utf8PathBuf,
     #[serde(rename(deserialize = "dst"))]
-    pub destination: Option<PathBuf>,
+    pub destination: Option<Utf8PathBuf>,
     #[serde(rename(deserialize = "type"))]
     pub icon_type: Option<String>,
     pub theme: Option<String>,
@@ -20,7 +21,7 @@ pub struct Icon {
 }
 
 impl Icon {
-    const fn new_with_source(source: PathBuf) -> Self {
+    const fn new_with_source(source: Utf8PathBuf) -> Self {
         Self {
             source,
             destination: None,
@@ -31,9 +32,9 @@ impl Icon {
         }
     }
 
-    pub fn get_destination(&self) -> Result<PathBuf> {
+    pub fn get_destination(&self) -> Result<Utf8PathBuf> {
         let dest = if self.pixmaps {
-            PathBuf::from("pixmaps").join("")
+            Utf8PathBuf::from("pixmaps").join("")
         } else {
             ensure!(
                 self.dimensions.is_some(),
@@ -45,7 +46,7 @@ impl Icon {
             let theme = self.theme.as_deref().unwrap_or(default_theme);
             let icon_type = self.icon_type.as_deref().unwrap_or(default_icon_type);
 
-            PathBuf::from("icons")
+            Utf8PathBuf::from("icons")
                 .join(theme)
                 .join(self.dimensions.as_ref().unwrap())
                 .join(icon_type)
@@ -66,6 +67,6 @@ impl FromStr for Icon {
     type Err = Void;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new_with_source(PathBuf::from(s)))
+        Ok(Self::new_with_source(Utf8PathBuf::from(s)))
     }
 }

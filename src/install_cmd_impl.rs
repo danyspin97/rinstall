@@ -1,5 +1,6 @@
-use std::{fs, path::Path};
+use std::fs;
 
+use camino::Utf8Path;
 use clap::Args;
 use color_eyre::{
     eyre::{bail, ensure, Context, ContextCompat},
@@ -14,7 +15,6 @@ use crate::{
     install_spec::InstallSpec,
     install_target::InstallTarget,
     package_info::PackageInfo,
-    path_to_str,
     project::Project,
     templating::Templating,
     utils::{append_destdir, write_to_file},
@@ -26,7 +26,8 @@ impl InstallCmd {
     pub fn run(self) -> Result<()> {
         let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &self.dirs)?;
         let dirs = Dirs::new(dirs_config, self.system).context("unable to create dirs")?;
-        let install_spec = InstallSpec::new_from_path(&self.package_dir)?;
+        let install_spec =
+            InstallSpec::new_from_path(Utf8Path::from_path(&self.package_dir).unwrap())?;
 
         // Check if the projectdir is a release tarball instead of the
         // directory containing the source code
@@ -53,7 +54,7 @@ impl InstallCmd {
             let project_type = package.project_type.clone();
             let project = Project::new_from_type(
                 project_type,
-                &self.package_dir,
+                Utf8Path::from_path(&self.package_dir).unwrap(),
                 is_release_tarball,
                 self.rust_debug_target,
             )?;
@@ -69,29 +70,14 @@ impl InstallCmd {
                     println!(
                         "Installing {} in {}",
                         "pkginfo".yellow().bold(),
-                        pkg_info_path
-                            .to_str()
-                            .with_context(|| format!(
-                                "unable to convert {:?} to string",
-                                pkg_info_path
-                            ))?
-                            .cyan()
-                            .bold()
+                        pkg_info_path.as_str().cyan().bold()
                     );
                     pkg_info.install(self.destdir.as_deref())?;
                 } else {
                     println!(
                         "Would install {} in {}",
                         "pkginfo".yellow().bold(),
-                        pkg_info
-                            .path
-                            .to_str()
-                            .with_context(|| format!(
-                                "unable to convert {:?} to string",
-                                pkg_info.path
-                            ))?
-                            .cyan()
-                            .bold()
+                        pkg_info.path.as_str().cyan().bold()
                     );
                 }
             }
@@ -117,7 +103,7 @@ impl InstallCmd {
         ensure!(source.exists(), "{:?} does not exist", source);
 
         if source.is_file() {
-            let destination = if path_to_str!(destination).ends_with('/') {
+            let destination = if destination.as_str().ends_with('/') {
                 destination.join(
                     source
                         .file_name()
@@ -144,13 +130,14 @@ impl InstallCmd {
                 } else {
                     "Would install:"
                 },
-                path_to_str!(source
+                source
                     .strip_prefix(self.package_dir.as_path())
-                    .unwrap_or(source))
-                .yellow()
-                .bold(),
+                    .unwrap_or(source)
+                    .as_str()
+                    .yellow()
+                    .bold(),
                 "->".purple(),
-                path_to_str!(destination).cyan().bold()
+                destination.as_str().cyan().bold()
             );
             if self.accept_changes {
                 fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
@@ -184,7 +171,7 @@ impl InstallCmd {
                         return Ok(());
                     }
 
-                    let full_path = entry.path();
+                    let full_path = Utf8Path::from_path(entry.path()).unwrap();
                     let relative_path = full_path.strip_prefix(&source).with_context(|| {
                         format!("unable to strip prefix {:?} from {:?}", source, full_path)
                     })?;
@@ -208,11 +195,14 @@ impl InstallCmd {
                         } else {
                             "Would install:"
                         },
-                        path_to_str!(source.strip_prefix(&self.package_dir).unwrap_or(&source))
+                        source
+                            .strip_prefix(&self.package_dir)
+                            .unwrap_or(&source)
+                            .as_str()
                             .yellow()
                             .bold(),
                         "->".purple(),
-                        path_to_str!(destination).cyan().bold()
+                        destination.as_str().cyan().bold()
                     );
                     if !self.accept_changes {
                         return Ok(());
@@ -244,8 +234,8 @@ impl InstallCmd {
     // return true if the file should be skipped
     fn handle_existing_files(
         &self,
-        source: &Path,
-        destination: &Path,
+        source: &Utf8Path,
+        destination: &Utf8Path,
         pkg_already_installed: bool,
         replace: bool,
     ) -> Result<bool> {
@@ -260,7 +250,7 @@ impl InstallCmd {
                     eprintln!(
                         "{} file {} already exists, add {} to overwrite it",
                         "WARNING:".red().italic(),
-                        path_to_str!(destination).yellow().bold(),
+                        destination.as_str().yellow().bold(),
                         "--force".bright_black().italic(),
                     );
                 }
@@ -268,13 +258,13 @@ impl InstallCmd {
                 eprintln!(
                     "{} file {} already exists, it would be overwritten",
                     "WARNING:".red().italic(),
-                    path_to_str!(destination).yellow().bold()
+                    destination.as_str().yellow().bold()
                 );
             } else {
                 eprintln!(
                     "{} file {} already exists, overwriting it",
                     "WARNING:".red().italic(),
-                    path_to_str!(destination)
+                    destination
                 );
             }
         }
@@ -284,13 +274,13 @@ impl InstallCmd {
                     eprintln!(
                         "{} config {} is being overwritten",
                         "WARNING:".red().italic(),
-                        path_to_str!(destination)
+                        destination
                     );
                 } else if !pkg_already_installed {
                     eprintln!(
                         "{} config {} will be overwritten",
                         "WARNING:".red().italic(),
-                        path_to_str!(destination)
+                        destination
                     );
                 }
             } else {
@@ -301,11 +291,14 @@ impl InstallCmd {
                     } else {
                         "Would skip"
                     },
-                    path_to_str!(source.strip_prefix(&self.package_dir).unwrap_or(source))
+                    source
+                        .strip_prefix(&self.package_dir)
+                        .unwrap_or(source)
+                        .as_str()
                         .yellow()
                         .bold(),
                     "->".purple(),
-                    path_to_str!(destination).cyan().bold()
+                    destination.as_str().cyan().bold()
                 );
                 // Skip installation
                 return Ok(true);

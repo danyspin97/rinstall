@@ -1,5 +1,6 @@
-use std::{collections::HashMap, fs, path::Path};
+use std::{collections::HashMap, fs};
 
+use camino::Utf8Path;
 use color_eyre::{
     eyre::{bail, Context},
     Result,
@@ -19,7 +20,7 @@ pub struct InstallSpec {
 }
 
 impl InstallSpec {
-    pub fn new_from_path(package_dir: &Path) -> Result<Self> {
+    pub fn new_from_path(package_dir: &Utf8Path) -> Result<Self> {
         // Try root/install.yml and root/.package/install.yml files
         let install_spec = {
             let install_spec = package_dir.join("install.yml");

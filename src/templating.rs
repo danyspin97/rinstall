@@ -1,5 +1,6 @@
-use std::{fs, path::Path};
+use std::fs;
 
+use camino::Utf8Path;
 use color_eyre::{
     eyre::{ensure, Context, ContextCompat},
     Result,
@@ -12,7 +13,7 @@ pub struct Templating {
 }
 
 impl Templating {
-    pub fn new(source: &Path) -> Result<Self> {
+    pub fn new(source: &Utf8Path) -> Result<Self> {
         Ok(Self {
             contents: fs::read_to_string(&source)
                 .with_context(|| format!("unable to read file {:?}", source))?,

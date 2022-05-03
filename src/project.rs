@@ -1,21 +1,14 @@
-use std::{
-    env,
-    os::unix::process::CommandExt,
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{env, os::unix::process::CommandExt, process::Command};
 
-use color_eyre::{
-    eyre::{Context, ContextCompat},
-    Result,
-};
+use camino::{Utf8Path, Utf8PathBuf};
+use color_eyre::{eyre::Context, Result};
 
 // Contains data about the project that will be installed
 // It doesn't refer to the system and the actual installation directories
 // It is only relevant for the source part in InstallEntry
 pub struct Project {
-    pub outputdir: PathBuf,
-    pub projectdir: PathBuf,
+    pub outputdir: Utf8PathBuf,
+    pub projectdir: Utf8PathBuf,
 }
 
 use crate::package::Type;
@@ -23,7 +16,7 @@ use crate::package::Type;
 impl Project {
     pub fn new_from_type(
         project_type: Type,
-        projectdir: &Path,
+        projectdir: &Utf8Path,
         is_release_tarball: bool,
         rust_debug_target: bool,
     ) -> Result<Self> {
@@ -42,10 +35,10 @@ impl Project {
 }
 
 fn get_target_dir_for_rust(
-    projectdir: &Path,
+    projectdir: &Utf8Path,
     rust_debug_target: bool,
-) -> Result<PathBuf> {
-    Ok(PathBuf::from({
+) -> Result<Utf8PathBuf> {
+    Ok(
         // if target directory does not exist, try reading the "target_directory"
         // from cargo metadata
         if !projectdir.join("target").exists()
@@ -54,39 +47,38 @@ fn get_target_dir_for_rust(
                 .output()
                 .map_or(false, |output| output.status.success())
         {
-            json::parse(&String::from_utf8_lossy(
-                &Command::new("cargo")
-                    .arg("metadata")
-                    .current_dir(projectdir)
-                    .uid(
-                        // cargo metadata only works when running as the current user that has built
-                        // the project. Otherwise it will use metadata for the root user and
-                        // it is almost never what we want
-                        env::var("SUDO_UID")
-                            .map_or(unsafe { libc::getuid() }, |uid| uid.parse::<u32>().unwrap()),
-                    )
-                    .gid(
-                        env::var("SUDO_GID")
-                            .map_or(unsafe { libc::getgid() }, |gid| gid.parse::<u32>().unwrap()),
-                    )
-                    .output()
-                    .context("unable to run `cargo metadata`")?
-                    .stdout,
-            ))
-            .context("unable to parse JSON from `cargo metadata` output")?["target_directory"]
-                .to_string()
+            Utf8PathBuf::from(
+                json::parse(&String::from_utf8_lossy(
+                    &Command::new("cargo")
+                        .arg("metadata")
+                        .current_dir(projectdir)
+                        .uid(
+                            // cargo metadata only works when running as the current user that has built
+                            // the project. Otherwise it will use metadata for the root user and
+                            // it is almost never what we want
+                            env::var("SUDO_UID").map_or(unsafe { libc::getuid() }, |uid| {
+                                uid.parse::<u32>().unwrap()
+                            }),
+                        )
+                        .gid(
+                            env::var("SUDO_GID").map_or(unsafe { libc::getgid() }, |gid| {
+                                gid.parse::<u32>().unwrap()
+                            }),
+                        )
+                        .output()
+                        .context("unable to run `cargo metadata`")?
+                        .stdout,
+                ))
+                .context("unable to parse JSON from `cargo metadata` output")?["target_directory"]
+                    .to_string(),
+            )
         } else {
-            projectdir
-                .join("target")
-                .as_os_str()
-                .to_str()
-                .with_context(|| format!("unable to convert {:?} to string", projectdir))?
-                .to_string()
+            projectdir.join("target")
         }
-    })
-    .join(if rust_debug_target {
-        "debug"
-    } else {
-        "release"
-    }))
+        .join(if rust_debug_target {
+            "debug"
+        } else {
+            "release"
+        }),
+    )
 }
