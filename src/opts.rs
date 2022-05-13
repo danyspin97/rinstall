@@ -21,7 +21,7 @@ pub struct Opts {
 #[derive(Subcommand)]
 pub enum SubCommand {
     #[clap(about = "Install the packages into the system")]
-    Install(InstallCmd),
+    Install(Box<InstallCmd>),
     #[clap(about = "Uninstall the packages from the system")]
     Uninstall(Uninstall),
 }
