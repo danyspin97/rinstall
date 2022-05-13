@@ -7,6 +7,7 @@ use color_eyre::{
     Result,
 };
 use colored::Colorize;
+use log::{info, warn};
 
 use crate::{dirs::Dirs, dirs_config_impl::DirsConfig, package_info::PackageInfo};
 
@@ -42,42 +43,39 @@ impl Uninstall {
                 let modified = file.has_been_modified()?;
                 if dry_run {
                     if file.replace && modified {
-                        eprintln!(
-                            "{} file {} has been modified but it will be uninstalled anyway",
-                            "WARNING:".red().italic(),
+                        warn!(
+                            "file {} has been modified but it will be uninstalled anyway",
                             file.path.as_str().yellow().bold()
                         );
                     } else if !file.replace && modified {
-                        eprintln!(
-                        "{} file {} has been modified but it won't be removed, add {} to remove it",
-                        "WARNING:".red().italic(),
+                        warn!(
+                        "file {} has been modified but it won't be removed, add {} to remove it",
                         file.path.as_str().yellow().bold(),
                         "--force".bright_black().italic(),
                     );
                     } else {
-                        println!("Would remove {}", file.path.as_str().yellow().bold());
+                        info!("Would remove {}", file.path.as_str().yellow().bold());
                     }
                 } else if !file.replace && modified && !self.force {
-                    println!("Keeping file {}", file.path.as_str().yellow().bold());
+                    info!("Keeping file {}", file.path.as_str().yellow().bold());
                 } else if modified && (file.replace || self.force) {
-                    eprintln!(
-                        "{} modified file {} has been uninstalled",
-                        "WARNING:".red().italic(),
+                    warn!(
+                        "modified file {} has been uninstalled",
                         file.path.as_str().yellow().bold(),
                     );
                     fs::remove_file(&file.path)
                         .with_context(|| format!("unable to remove file {:?}", file.path))?;
                 } else {
-                    println!("Removing {}", file.path.as_str().yellow().bold());
+                    info!("Removing {}", file.path.as_str().yellow().bold());
                     fs::remove_file(&file.path)
                         .with_context(|| format!("unable to remove file {:?}", file.path))?;
                 }
             }
 
             if dry_run {
-                println!("Would remove {}", pkg_info.path.as_str().yellow().bold());
+                info!("Would remove {}", pkg_info.path.as_str().yellow().bold());
             } else {
-                println!("Removing {}", pkg_info.path.as_str().yellow().bold());
+                info!("Removing {}", pkg_info.path.as_str().yellow().bold());
                 fs::remove_file(&pkg_info.path)
                     .with_context(|| format!("unable to remove file {:?}", &pkg_info.path))?;
             }

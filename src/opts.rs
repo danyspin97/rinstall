@@ -14,6 +14,13 @@ pub struct Opts {
         global = true
     )]
     pub config: Option<String>,
+    #[clap(
+        short,
+        long,
+        help = concat!("Do not print anything on the stdout. Warnings and",
+                       " errors will still be print on the stderr")
+    )]
+    pub quiet: bool,
     #[clap(subcommand)]
     pub subcmd: SubCommand,
 }

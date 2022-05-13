@@ -7,6 +7,7 @@ use color_eyre::{
     Result,
 };
 use colored::Colorize;
+use log::{info, warn};
 use walkdir::WalkDir;
 
 use crate::{
@@ -40,7 +41,7 @@ impl InstallCmd {
             let mut pkg_info = PackageInfo::new(package.name.as_ref().unwrap(), &dirs);
             let pkg_info_path = append_destdir(&pkg_info.path, self.destdir.as_deref());
             let pkg_already_installed = pkg_info_path.exists();
-            println!(
+            info!(
                 "{} {} {}",
                 ">>>".magenta(),
                 "Package".bright_black(),
@@ -53,9 +54,8 @@ impl InstallCmd {
                     pkg_info.pkg_name
                 );
 
-                eprintln!(
-                    "{}: package {} is already installed",
-                    "WARNING".red().italic(),
+                warn!(
+                    "package {} is already installed",
                     pkg_info.pkg_name.blue().italic(),
                 )
             }
@@ -90,14 +90,14 @@ impl InstallCmd {
 
             if !self.skip_pkg_info {
                 if self.accept_changes {
-                    println!(
+                    info!(
                         "Installing {} in {}",
                         "pkginfo".yellow().bold(),
                         pkg_info_path.as_str().cyan().bold()
                     );
                     pkg_info.install(self.destdir.as_deref())?;
                 } else {
-                    println!(
+                    info!(
                         "Would install {} in {}",
                         "pkginfo".yellow().bold(),
                         pkg_info.path.as_str().cyan().bold()
@@ -146,7 +146,7 @@ impl InstallCmd {
             {
                 return Ok(());
             }
-            println!(
+            info!(
                 "{} {} {} {}",
                 if self.accept_changes {
                     "Installing"
@@ -211,7 +211,7 @@ impl InstallCmd {
                     {
                         return Ok(());
                     }
-                    println!(
+                    info!(
                         "{} {} {} {}",
                         if self.accept_changes {
                             "Installing"
@@ -270,44 +270,30 @@ impl InstallCmd {
                         destination
                     );
                 } else if !pkg_already_installed {
-                    eprintln!(
-                        "{} file {} already exists, add {} to overwrite it",
-                        "WARNING:".red().italic(),
+                    warn!(
+                        "file {} already exists, add {} to overwrite it",
                         destination.as_str().yellow().bold(),
                         "--force".bright_black().italic(),
                     );
                 }
             } else if !self.accept_changes {
-                eprintln!(
-                    "{} file {} already exists, it would be overwritten",
-                    "WARNING:".red().italic(),
+                warn!(
+                    "file {} already exists, it would be overwritten",
                     destination.as_str().yellow().bold()
                 );
             } else {
-                eprintln!(
-                    "{} file {} already exists, overwriting it",
-                    "WARNING:".red().italic(),
-                    destination
-                );
+                warn!("file {} already exists, overwriting it", destination);
             }
         }
         if destination.exists() && !replace {
             if self.update_config {
                 if self.accept_changes {
-                    eprintln!(
-                        "{} config {} is being overwritten",
-                        "WARNING:".red().italic(),
-                        destination
-                    );
+                    warn!("config {} is being overwritten", destination);
                 } else if !pkg_already_installed {
-                    eprintln!(
-                        "{} config {} will be overwritten",
-                        "WARNING:".red().italic(),
-                        destination
-                    );
+                    warn!("config {} will be overwritten", destination);
                 }
             } else {
-                println!(
+                info!(
                     "{} config {} {} {}",
                     if self.accept_changes {
                         "Skipping"

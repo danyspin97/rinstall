@@ -4,6 +4,7 @@ use color_eyre::{
     Result,
 };
 use colored::Colorize;
+use log::warn;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 
@@ -492,9 +493,8 @@ impl Package {
                 .unwrap()
                 .matches(rinstall_version)
         {
-            eprintln!(
-                "{}: type '{}' has been deprecated, use '{}' or leave it empty",
-                "WARNING".red().italic(),
+            warn!(
+                "type '{}' has been deprecated, use '{}' or leave it empty",
                 "custom".bright_black(),
                 "default".bright_black(),
             );
