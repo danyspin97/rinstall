@@ -1,8 +1,3 @@
-#![deny(clippy::all)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
-#![warn(clippy::cargo)]
-
 mod dirs;
 mod dirs_config_impl;
 mod icon;
