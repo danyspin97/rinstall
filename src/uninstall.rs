@@ -12,9 +12,9 @@ pub struct Uninstall {
         long = "yes",
         help = "Accept the changes and perform the uninstallation"
     )]
-    accept_changes: bool,
+    pub accept_changes: bool,
     #[clap(short = 'f', long = "force", help = "Force the uninstallation")]
-    force: bool,
+    pub force: bool,
     #[clap(
         long = "system",
         help = "Perform a system-wide uninstallation",
@@ -44,5 +44,5 @@ pub struct Uninstall {
         help = "The names or pkginfo files of the packages to remove",
         required = true,
     )]
-    packages: Vec<String>,
+    pub packages: Vec<String>,
 }

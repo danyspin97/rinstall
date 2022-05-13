@@ -64,6 +64,12 @@ pub struct InstallCmd {
         help = "List of packages to install, separated by a comma"
     )]
     pub packages: Vec<String>,
+    #[clap(
+        short = 'U',
+        long = "update",
+        help = "Update the current installed package"
+    )]
+    pub update: bool,
     #[clap(flatten, next_help_heading = "DIRECTORIES")]
     pub dirs: DirsConfig,
 }

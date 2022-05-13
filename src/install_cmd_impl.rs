@@ -18,6 +18,7 @@ use crate::{
     project::Project,
     templating::Templating,
     utils::{append_destdir, write_to_file},
+    Uninstall,
 };
 
 include!("install_cmd.rs");
@@ -45,11 +46,33 @@ impl InstallCmd {
                 "Package".bright_black(),
                 pkg_info.pkg_name.italic().blue()
             );
-            ensure!(
-                !self.accept_changes || !pkg_already_installed,
-                "cannot install {} because it has already been installed",
-                pkg_info.pkg_name
-            );
+            if pkg_already_installed && !self.update {
+                ensure!(
+                    !self.accept_changes,
+                    "cannot install {} because it has already been installed",
+                    pkg_info.pkg_name
+                );
+
+                eprintln!(
+                    "{}: package {} is already installed",
+                    "WARNING".red().italic(),
+                    pkg_info.pkg_name.blue().italic(),
+                )
+            }
+
+            if pkg_already_installed && self.update {
+                let uninstall = Uninstall {
+                    config: None,
+                    accept_changes: self.accept_changes,
+                    force: self.force,
+                    system: self.system,
+                    prefix: None,
+                    localstatedir: Some(dirs.localstatedir.as_str().to_owned()),
+                    packages: vec![pkg_info.pkg_name.clone()],
+                };
+
+                uninstall.run()?;
+            }
 
             let project_type = package.project_type.clone();
             let project = Project::new_from_type(
