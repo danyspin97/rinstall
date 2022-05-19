@@ -2,7 +2,6 @@
 
 [![builds.sr.ht status](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml.svg)](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml?)
 ![GitHub](https://img.shields.io/github/license/danyspin97/rinstall)
-![Liberapay giving](https://img.shields.io/liberapay/patrons/danyspin97.svg?logo=liberapay)
 
 **rinstall** is an helper tool that installs software and additional data into the system.
 Many programs often include man pages, documentation, config files and there is no standard
