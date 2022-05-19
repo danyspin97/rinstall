@@ -45,7 +45,7 @@ impl Uninstall {
                     if file.replace && modified {
                         warn!(
                             "file {} has been modified but it will be uninstalled anyway",
-                            file.path.as_str().yellow().bold()
+                            file.path.as_str().cyan().bold()
                         );
                     } else if !file.replace && modified {
                         warn!(
@@ -54,28 +54,28 @@ impl Uninstall {
                         "--force".bright_black().italic(),
                     );
                     } else {
-                        info!("Would remove {}", file.path.as_str().yellow().bold());
+                        info!("Would remove {}", file.path.as_str().cyan().bold());
                     }
                 } else if !file.replace && modified && !self.force {
-                    info!("Keeping file {}", file.path.as_str().yellow().bold());
+                    info!("Keeping file {}", file.path.as_str().cyan().bold());
                 } else if modified && (file.replace || self.force) {
                     warn!(
                         "modified file {} has been uninstalled",
-                        file.path.as_str().yellow().bold(),
+                        file.path.as_str().cyan().bold(),
                     );
                     fs::remove_file(&file.path)
                         .with_context(|| format!("unable to remove file {:?}", file.path))?;
                 } else {
-                    info!("Removing {}", file.path.as_str().yellow().bold());
+                    info!("Removing {}", file.path.as_str().cyan().bold());
                     fs::remove_file(&file.path)
                         .with_context(|| format!("unable to remove file {:?}", file.path))?;
                 }
             }
 
             if dry_run {
-                info!("Would remove {}", pkg_info.path.as_str().yellow().bold());
+                info!("Would remove {}", pkg_info.path.as_str().cyan().bold());
             } else {
-                info!("Removing {}", pkg_info.path.as_str().yellow().bold());
+                info!("Removing {}", pkg_info.path.as_str().cyan().bold());
                 fs::remove_file(&pkg_info.path)
                     .with_context(|| format!("unable to remove file {:?}", &pkg_info.path))?;
             }

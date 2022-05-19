@@ -91,15 +91,15 @@ impl InstallCmd {
             if !self.skip_pkg_info {
                 if self.accept_changes {
                     info!(
-                        "Installing {} in {}",
-                        "pkginfo".yellow().bold(),
+                        "Installing {} -> {}",
+                        "pkginfo".purple().bold(),
                         pkg_info_path.as_str().cyan().bold()
                     );
                     pkg_info.install(self.destdir.as_deref())?;
                 } else {
                     info!(
-                        "Would install {} in {}",
-                        "pkginfo".yellow().bold(),
+                        "Would install {} -> {}",
+                        "pkginfo".purple().bold(),
                         pkg_info.path.as_str().cyan().bold()
                     );
                 }
@@ -147,19 +147,18 @@ impl InstallCmd {
                 return Ok(());
             }
             info!(
-                "{} {} {} {}",
+                "{} {} -> {}",
                 if self.accept_changes {
                     "Installing"
                 } else {
-                    "Would install:"
+                    "Would install"
                 },
                 source
                     .strip_prefix(self.package_dir.as_path())
                     .unwrap_or(source)
                     .as_str()
-                    .yellow()
+                    .purple()
                     .bold(),
-                "->".purple(),
                 destination.as_str().cyan().bold()
             );
             if self.accept_changes {
@@ -212,19 +211,18 @@ impl InstallCmd {
                         return Ok(());
                     }
                     info!(
-                        "{} {} {} {}",
+                        "{} {} -> {}",
                         if self.accept_changes {
                             "Installing"
                         } else {
-                            "Would install:"
+                            "Would install"
                         },
                         source
                             .strip_prefix(&self.package_dir)
                             .unwrap_or(&source)
                             .as_str()
-                            .yellow()
+                            .purple()
                             .bold(),
-                        "->".purple(),
                         destination.as_str().cyan().bold()
                     );
                     if !self.accept_changes {
@@ -294,7 +292,7 @@ impl InstallCmd {
                 }
             } else {
                 info!(
-                    "{} config {} {} {}",
+                    "{} config {} -> {}",
                     if self.accept_changes {
                         "Skipping"
                     } else {
@@ -304,9 +302,8 @@ impl InstallCmd {
                         .strip_prefix(&self.package_dir)
                         .unwrap_or(source)
                         .as_str()
-                        .yellow()
+                        .purple()
                         .bold(),
-                    "->".purple(),
                     destination.as_str().cyan().bold()
                 );
                 // Skip installation
