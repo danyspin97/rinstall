@@ -34,7 +34,8 @@ pub struct InstallCmd {
     pub update_config: bool,
     #[clap(
         long,
-        help = "Use the generated binaries and libraries from the debug profile (only effective for rust projects)"
+        help = concat!("Use the generated binaries and libraries from the",
+                       " debug profile (only effective for rust projects)")
     )]
     pub rust_debug_target: bool,
     #[clap(
