@@ -19,6 +19,8 @@
 * Rework rinstall arguments
 * Enable system mode dependending on the flag; previously it was
   always enabled when rinstall was executed as root
+* Add --update flag to install command
+* Improved messages
 
 # 0.1.1
 
