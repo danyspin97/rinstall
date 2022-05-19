@@ -52,6 +52,8 @@ struct Completions {
     #[serde(default)]
     pub bash: Vec<Entry>,
     #[serde(default)]
+    pub elvish: Vec<Entry>,
+    #[serde(default)]
     pub fish: Vec<Entry>,
     #[serde(default)]
     pub zsh: Vec<Entry>,
@@ -299,6 +301,12 @@ impl Package {
                 )
             })
             .collect::<Vec<(Entry, &'static str)>>();
+        completions.extend(
+            self.completions
+                .elvish
+                .into_iter()
+                .map(|completion| (completion, "elvish/lib")),
+        );
         if system_install {
             completions.extend(
                 self.completions
@@ -512,6 +520,7 @@ impl Package {
         check_version!("desktop-files", desktop_files, ">=0.1.0");
         check_version!("appstream-metadata", appstream_metadata, ">=0.1.0");
         check_version_expr!("completions:bash", self.completions.bash, ">=0.1.0");
+        check_version_expr!("completions:elvish", self.completions.elvish, ">=0.2.0");
         check_version_expr!("completions:fish", self.completions.fish, ">=0.1.0");
         check_version_expr!("completions:zsh", self.completions.zsh, ">=0.1.0");
         check_version!("pam-modules", pam_modules, ">=0.1.0");

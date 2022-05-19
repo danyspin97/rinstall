@@ -21,6 +21,7 @@
   always enabled when rinstall was executed as root
 * Add --update flag to install command
 * Improved messages
+* Add elvish completions
 
 # 0.1.1
 

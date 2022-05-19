@@ -416,12 +416,14 @@ For [AppStream metadata] files.
 | | Version | System-wide only |
 | --- | --- | --- |
 | *bash* | _since 0.1.0_ | *no* |
+| *elvish* | _since 0.2.0_ | *no* |
 | *fish* | _since 0.1.0_ | *yes* |
 | *zsh* | _since 0.1.0_ | *yes* |
 
 For completions files; they will be installed in the respective shell completions
 directory, under `datarootdir`:
 - `$datarootdir/bash-completion/completions` for *bash*
+- `$datarootdir/elvish/lib` for *elvish*
 - `$datarootdir/fish/vendor_completions.d` for *fish*
 - `$datarootdir/zsh/site-functions` for *zsh*
 
