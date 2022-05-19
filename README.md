@@ -4,16 +4,15 @@
 ![GitHub](https://img.shields.io/github/license/danyspin97/rinstall)
 ![Liberapay giving](https://img.shields.io/liberapay/patrons/danyspin97.svg?logo=liberapay)
 
-rinstall is an helper tool that installs software and additional data into the system.
+**rinstall** is an helper tool that installs software and additional data into the system.
 Many programs often include man pages, documentation, config files and there is no standard
-way to install them except for using Makefiles. However, Makefiles are notoriously complicated to
-setup; it is especially hard to follow the [Directory Variables] from the _GNU Coding
-Standard_.).
+way to install them except for using Makefiles or complete build system. However, Makefiles
+are notoriously complicated to setup; it is especially hard to follow the [Directory Variables]
+from the _GNU Coding Standard_.). Build systems instead cover the installation part but
+depending on an entire build system to install a shell script or a rust binary is not optimal.
+You can read more of _rinstall_ rationale [here][Makefiles Best Practices].
 
 [Directory Variables]: https://www.gnu.org/prep/standards/html_node/Directory-Variables.html
-
-[This][Makefiles Best Practices] is rinstall rationale.
-
 [Makefiles Best Practices]: https://danyspin97.org/blog/makefiles-best-practices/
 
 rinstall read a declarative YAML file (`install.yml`) containing the list of the files to install.
@@ -22,6 +21,8 @@ It then installs the program either system-wide or for the current user (followi
 or `.config/rinstall.yml`, using a default one otherwise.
 
 [XDG BaseDirectories]: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/rinstall.svg)](https://repology.org/project/rinstall/versions)
 
 ## Features
 
@@ -81,6 +82,30 @@ the command as root to apply the changes to the filestem.
 ```
 # rinstall install --system -y
 ```
+
+### Release tarballs
+
+**rinstall** supports installing from release tarballs (i.e. the tarballs published on Github
+for each release containing a compiled version of the program).
+
+To allow a program to be installed from a release tarball create a `.tarball` empty file during
+the generation and include `install.yml`. **rinstall** will then assume that all the files are in
+the top directory and proceed to install them as usual; this means that for _Rust_ programs, the
+executables will be searched in the top directory instead of `target/release`. Please assure that
+all the files listed in `install.yml` are included in the tarball.
+
+### Uninstall
+
+When a package gets been installed, a `.pkg` will be installed inside `localstatedir/rinstall`.
+This file will contain the list of files so that when running the `uninstall` subcommand,
+rinstall can revert the installation of a package:
+
+```bash
+$ rinstall uninstall foo
+Would remove "/usr/local/bin/foo"
+Would remove "/usr/local/var/lib/rinstall/foo.pkg"
+```
+
 
 ## Configuration
 
@@ -180,6 +205,13 @@ pkgs:
     exe:
       - foo
 ```
+
+### `install.yml` examples
+
+- [kanidm](https://github.com/kanidm/kanidm/blob/master/install.yml)
+- [wpaperd](https://github.com/danyspin97/wpaperd/blob/main/install.yml)
+- [dog in openSUSE](https://build.opensuse.org/package/view_file/network:utilities/dog/install.yml?expand=1)
+- [myxer in openSUSE](https://build.opensuse.org/package/view_file/multimedia:apps/myxer/install.yml?expand=1)
 
 ### rinstall version
 
@@ -612,29 +644,6 @@ enabled for an entry:
 - `@mandir@`
 - `@pam_modulesdir@`
 - `@systemd_unitsdir@`
-
-### Release tarballs
-
-**rinstall** supports installing from release tarballs (i.e. the tarballs published on Github
-for each release containing a compiled version of the program).
-
-To allow a program to be installed from a release tarball create a `.tarball` empty file during
-the generation and include `install.yml`. **rinstall** will then assume that all the files are in
-the top directory and proceed to install them as usual; this means that for _Rust_ programs, the
-executables will be searched in the top directory instead of `target/release`. Please assure that
-all the files listed in `install.yml` are included in the tarball.
-
-### Uninstall
-
-When a package gets been installed, a `.pkg` will be installed inside `localstatedir/rinstall`.
-This file will contain the list of files so that when running the `uninstall` subcommand,
-rinstall can revert the installation of a package:
-
-```bash
-$ rinstall uninstall foo
-Would remove "/usr/local/bin/foo"
-Would remove "/usr/local/var/lib/rinstall/foo.pkg"
-```
 
 ## License
 
