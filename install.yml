@@ -13,6 +13,8 @@ pkgs:
     completions:
       bash:
         - completions/rinstall.bash
+      elvish:
+        - completions/rinstall.elv
       fish:
         - completions/rinstall.fish
       zsh:
