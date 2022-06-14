@@ -1,6 +1,6 @@
 # rinstall
 
-[![builds.sr.ht status](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml.svg)](https://builds.sr.ht/~danyspin97/rinstall/commits/.build.yml?)
+![GitHub branch checks state](https://img.shields.io/github/checks-status/danyspin97/rinstall/main?logo=github)
 ![GitHub](https://img.shields.io/github/license/danyspin97/rinstall)
 
 **rinstall** is an helper tool that installs software and additional data into the system.
