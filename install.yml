@@ -1,4 +1,4 @@
-rinstall: 0.1.0
+rinstall: 0.2.0
 pkgs:
   rinstall:
     type: rust
