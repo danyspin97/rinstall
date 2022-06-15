@@ -7,7 +7,7 @@ use color_eyre::{eyre::Context, Result};
 // It doesn't refer to the system and the actual installation directories
 // It is only relevant for the source part in InstallEntry
 pub struct Project {
-    pub outputdir: Utf8PathBuf,
+    pub outputdir: Option<Utf8PathBuf>,
     pub projectdir: Utf8PathBuf,
 }
 
@@ -22,11 +22,11 @@ impl Project {
     ) -> Result<Self> {
         Ok(Self {
             outputdir: if is_release_tarball {
-                projectdir.to_path_buf()
+                None
             } else {
                 match project_type {
-                    Type::Rust => get_target_dir_for_rust(projectdir, rust_debug_target)?,
-                    Type::Default | Type::Custom => projectdir.to_path_buf(),
+                    Type::Rust => Some(get_target_dir_for_rust(projectdir, rust_debug_target)?),
+                    Type::Default | Type::Custom => None,
                 }
             },
             projectdir: projectdir.to_path_buf(),

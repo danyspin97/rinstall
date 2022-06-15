@@ -8,13 +8,10 @@ use log::warn;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 
-use crate::icon::Icon;
 use crate::install_entry::{string_or_struct, InstallEntry};
 use crate::install_target::InstallTarget;
-use crate::project::Project;
 use crate::Dirs;
-
-static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
+use crate::{icon::Icon, install_target::FilesPolicy};
 
 #[derive(Deserialize, Clone, PartialEq, Debug)]
 pub enum Type {
@@ -116,10 +113,10 @@ macro_rules! entry {
 }
 
 impl Package {
+    // Generate a vector of InstallTarget from a package defined in install.yml
     pub fn targets(
         self,
         dirs: &Dirs,
-        project: &Project,
         rinstall_version: &Version,
         system_install: bool,
     ) -> Result<Vec<InstallTarget>> {
@@ -135,83 +132,69 @@ impl Package {
         let package_name = self.name.unwrap();
         let mut results = Vec::new();
 
-        macro_rules! get_files_impl {
-            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal, $replace:literal ) => {
-                self.$files
-                    .into_iter()
-                    .map(|entry| -> Result<InstallTarget> {
-                        let entry = entry!(entry);
-                        if $parent_dir == &project.outputdir
-                            && entry.source.starts_with(PROJECTDIR_NEEDLE)
-                        {
-                            InstallTarget::new(
-                                InstallEntry {
-                                    source: entry
-                                        .source
-                                        .strip_prefix(PROJECTDIR_NEEDLE)?
-                                        .to_path_buf(),
-                                    destination: entry.destination,
-                                    templating: entry.templating,
-                                },
-                                $install_dir,
-                                &project.projectdir,
-                                $replace,
-                            )
-                        } else {
-                            InstallTarget::new(entry, $install_dir, $parent_dir, $replace)
-                        }
-                    })
-                    .collect::<Result<Vec<InstallTarget>>>()
-                    .with_context(|| format!("error while iterating {} files", $name))?
-            };
-        }
-        macro_rules! get_files {
-            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
-                get_files_impl!($files, $install_dir, $parent_dir, $name, true)
-            };
-        }
-        macro_rules! get_no_replace_files {
-            ( $files:tt, $install_dir:expr, $parent_dir:expr, $name:literal ) => {
-                get_files_impl!($files, $install_dir, $parent_dir, $name, false)
-            };
+        fn get_files(
+            files: Vec<Entry>,
+            install_dir: &Utf8Path,
+            name: &str,
+            replace: FilesPolicy,
+        ) -> Result<Vec<InstallTarget>> {
+            Ok(files
+                .into_iter()
+                .map(|entry| -> Result<InstallTarget> {
+                    let entry = entry!(entry);
+                    InstallTarget::new(entry, install_dir, replace)
+                })
+                .collect::<Result<Vec<InstallTarget>>>()
+                .with_context(|| format!("error while iterating {} files", name))?)
         }
 
-        results.extend(get_files!(exe, &dirs.bindir, &project.outputdir, "exe"));
+        results.extend(get_files(
+            self.exe,
+            &dirs.bindir,
+            "exe",
+            FilesPolicy::Replace,
+        )?);
+
         if let Some(sbindir) = &dirs.sbindir {
-            results.extend(get_files!(
-                admin_exe,
+            results.extend(get_files(
+                self.admin_exe,
                 sbindir,
-                &project.outputdir,
-                "admin_exe"
-            ));
+                "admin_exe",
+                FilesPolicy::Replace,
+            )?);
         }
-        results.extend(get_files!(libs, &dirs.libdir, &project.outputdir, "libs"));
-        results.extend(get_files!(
-            libexec,
+        results.extend(get_files(
+            self.libs,
+            &dirs.libdir,
+            "libs",
+            FilesPolicy::Replace,
+        )?);
+        results.extend(get_files(
+            self.libexec,
             &dirs.libexecdir,
-            &project.outputdir,
-            "libexec"
-        ));
+            "libexec",
+            FilesPolicy::Replace,
+        )?);
         if let Some(includedir) = &dirs.includedir {
-            results.extend(get_files!(
-                includes,
+            results.extend(get_files(
+                self.includes,
                 includedir,
-                &project.projectdir,
-                "includes"
-            ));
+                "includes",
+                FilesPolicy::Replace,
+            )?);
         }
-        results.extend(get_files!(
-            data,
+        results.extend(get_files(
+            self.data,
             &dirs.datadir.join(&package_name),
-            &project.projectdir,
-            "data"
-        ));
-        results.extend(get_no_replace_files!(
-            config,
+            "data",
+            FilesPolicy::Replace,
+        )?);
+        results.extend(get_files(
+            self.config,
             &dirs.sysconfdir,
-            &project.projectdir,
-            "config"
-        ));
+            "config",
+            FilesPolicy::NoReplace,
+        )?);
 
         if let Some(mandir) = &dirs.mandir {
             results.extend(
@@ -241,7 +224,7 @@ impl Package {
                             "the last character should be a digit from 1 to 8"
                         );
                         let install_dir = mandir.join(format!("man{}", &man_cat));
-                        InstallTarget::new(entry, &install_dir, &project.projectdir, true)
+                        InstallTarget::new(entry, &install_dir, FilesPolicy::Replace)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
                     .context("error while iterating man pages")?,
@@ -254,36 +237,41 @@ impl Package {
                 .as_ref()
                 .unwrap()
                 .join(Utf8Path::new(&package_name));
-            results.extend(get_files!(docs, pkg_docs, &project.projectdir, "docs"));
-            results.extend(get_files!(
-                user_config,
+            results.extend(get_files(
+                self.docs,
+                pkg_docs,
+                "docs",
+                FilesPolicy::Replace,
+            )?);
+            results.extend(get_files(
+                self.user_config,
                 &pkg_docs.join("user-config"),
-                &project.projectdir,
-                "user-config"
-            ));
+                "user-config",
+                FilesPolicy::Replace,
+            )?);
         } else {
-            results.extend(get_no_replace_files!(
-                user_config,
+            results.extend(get_files(
+                self.user_config,
                 &dirs.sysconfdir,
-                &project.projectdir,
-                "user-config"
-            ));
+                "user-config",
+                FilesPolicy::NoReplace,
+            )?);
         }
 
-        results.extend(get_files!(
-            desktop_files,
+        results.extend(get_files(
+            self.desktop_files,
             &dirs.datarootdir.join("applications"),
-            &project.projectdir,
-            "desktop-files"
-        ));
+            "desktop-files",
+            FilesPolicy::Replace,
+        )?);
 
         if system_install {
-            results.extend(get_files!(
-                appstream_metadata,
+            results.extend(get_files(
+                self.appstream_metadata,
                 &dirs.datarootdir.join("metainfo"),
-                &project.projectdir,
-                "appstream-metadata"
-            ));
+                "appstream-metadata",
+                FilesPolicy::Replace,
+            )?);
         }
 
         let mut completions = self
@@ -328,8 +316,7 @@ impl Package {
                     InstallTarget::new(
                         entry!(entry),
                         &dirs.datarootdir.join(completionsdir),
-                        &project.projectdir,
-                        true,
+                        FilesPolicy::Replace,
                     )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
@@ -365,8 +352,7 @@ impl Package {
                                 templating,
                             },
                             pam_modulesdir,
-                            &project.outputdir,
-                            true,
+                            FilesPolicy::Replace,
                         )
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
@@ -375,19 +361,19 @@ impl Package {
         }
 
         if system_install {
-            results.extend(get_files!(
-                systemd_units,
+            results.extend(get_files(
+                self.systemd_units,
                 &dirs.systemd_unitsdir.join("system"),
-                &project.projectdir,
-                "systemd-units"
-            ));
+                "systemd-units",
+                FilesPolicy::Replace,
+            )?);
         }
-        results.extend(get_files!(
-            systemd_user_units,
+        results.extend(get_files(
+            self.systemd_user_units,
             &dirs.systemd_unitsdir.join("user"),
-            &project.projectdir,
-            "systemd-user-units"
-        ));
+            "systemd-user-units",
+            FilesPolicy::Replace,
+        )?);
 
         results.extend(
             self.icons
@@ -411,8 +397,7 @@ impl Package {
                             templating: false,
                         },
                         &dirs.datarootdir,
-                        &project.projectdir,
-                        true,
+                        FilesPolicy::Replace,
                     )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
@@ -449,27 +434,27 @@ impl Package {
                             .to_lowercase()
                             .to_string();
                         let install_dir = dirs.datarootdir.join("terminfo").join(&initial);
-                        InstallTarget::new(entry, &install_dir, &project.projectdir, true)
+                        InstallTarget::new(entry, &install_dir, FilesPolicy::Replace)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
                     .context("error while iterating terminfo files")?,
             );
         }
 
-        results.extend(get_files!(
-            licenses,
+        results.extend(get_files(
+            self.licenses,
             &dirs.datarootdir.join("licenses").join(&package_name),
-            &project.projectdir,
-            "licenses"
-        ));
+            "licenses",
+            FilesPolicy::Replace,
+        )?);
 
         if system_install {
-            results.extend(get_files!(
-                pkg_config,
+            results.extend(get_files(
+                self.pkg_config,
                 &dirs.libdir.join("pkgconfig"),
-                &project.projectdir,
-                "pkg-config"
-            ));
+                "pkg-config",
+                FilesPolicy::Replace,
+            )?);
         }
 
         Ok(results)

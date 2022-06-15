@@ -24,6 +24,8 @@ use crate::{
 
 include!("install_cmd.rs");
 
+static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
+
 impl InstallCmd {
     pub fn run(self) -> Result<()> {
         let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &self.dirs)?;
@@ -82,10 +84,16 @@ impl InstallCmd {
                 self.rust_debug_target,
             )?;
 
-            let targets = package.targets(&dirs, &project, &version, self.system)?;
+            let targets = package.targets(&dirs, &version, self.system)?;
 
             for target in targets {
-                self.install_target(&target, &dirs, &mut pkg_info, pkg_already_installed)?;
+                self.install_target(
+                    &target,
+                    &dirs,
+                    &mut pkg_info,
+                    pkg_already_installed,
+                    &project,
+                )?;
             }
 
             if !self.skip_pkg_info {
@@ -114,6 +122,7 @@ impl InstallCmd {
         dirs: &Dirs,
         pkg_info: &mut PackageInfo,
         pkg_already_installed: bool,
+        project: &Project,
     ) -> Result<()> {
         let InstallTarget {
             source,
@@ -122,6 +131,23 @@ impl InstallCmd {
             replace,
         } = &install_target;
         let destination = append_destdir(destination, self.destdir.as_deref());
+
+        // The source is using the needle to force it to be in the projectdir
+        let source = if let Ok(source) = source.strip_prefix(PROJECTDIR_NEEDLE) {
+            source.to_path_buf()
+        } else if let Some(outputdir) = &project.outputdir {
+            // In this case we are checking if the source exists inside output_dir
+            // If it does we use it
+            let outputdir_source = outputdir.join(source);
+            if outputdir_source.exists() {
+                outputdir_source
+            } else {
+                source.clone()
+            }
+        } else {
+            // Otherwise we use project_dir
+            source.clone()
+        };
 
         ensure!(source.exists(), "{:?} does not exist", source);
 
@@ -138,7 +164,7 @@ impl InstallCmd {
             // destdir conflicts with force and update-config
             if self.destdir.is_none()
                 && self.handle_existing_files(
-                    source,
+                    &source,
                     &destination,
                     pkg_already_installed,
                     *replace,
@@ -155,7 +181,7 @@ impl InstallCmd {
                 },
                 source
                     .strip_prefix(self.package_dir.as_path())
-                    .unwrap_or(source)
+                    .unwrap_or(&source)
                     .as_str()
                     .purple()
                     .bold(),
@@ -166,7 +192,7 @@ impl InstallCmd {
                     format!("unable to create directory {:?}", destination.parent())
                 })?;
                 if *templating {
-                    let mut templating = Templating::new(source)?;
+                    let mut templating = Templating::new(&source)?;
                     templating
                         .apply(dirs)
                         .with_context(|| format!("unable to apply templating to {:?}", source))?;

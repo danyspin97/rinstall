@@ -13,16 +13,27 @@ pub struct InstallTarget {
     pub replace: bool,
 }
 
+#[derive(Clone, Copy)]
+pub enum FilesPolicy {
+    Replace,
+    NoReplace,
+}
+
 impl InstallTarget {
     pub fn new(
         entry: InstallEntry,
         install_dir: &Utf8Path,
-        parent_dir: &Utf8Path,
-        is_repleaceable: bool,
+        policy: FilesPolicy,
     ) -> Result<Self> {
-        let full_source = parent_dir.join(&entry.source);
+        let replace = matches!(policy, FilesPolicy::Replace);
+        ensure!(
+            entry.source.is_relative(),
+            "the source file {:?} is not relative",
+            entry.source
+        );
+
         let destination =
-            if full_source.is_file() || entry.destination.is_some() {
+            if entry.source.is_file() || entry.destination.is_some() {
                 install_dir.join(if let Some(destination) = entry.destination {
                     ensure!(
                         destination.is_relative(),
@@ -37,17 +48,12 @@ impl InstallTarget {
             } else {
                 install_dir.to_path_buf()
             };
-        ensure!(
-            entry.source.is_relative(),
-            "the source file {:?} is not relative",
-            entry.source
-        );
 
         Ok(Self {
-            source: full_source,
+            source: entry.source,
             destination,
             templating: entry.templating,
-            replace: is_repleaceable,
+            replace,
         })
     }
 }
