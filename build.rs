@@ -1,9 +1,9 @@
 use clap::{ArgEnum, IntoApp};
 use clap_complete::{generate_to, Shell};
 use clap_mangen::Man;
-use std::fs::File;
 use std::io::Error;
 use std::path::Path;
+use std::{fs::File, path::PathBuf};
 
 use clap::{Args, Parser, Subcommand};
 use serde::Deserialize;
@@ -36,16 +36,22 @@ fn build_manpages(outdir: &Path) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("cargo:rerun-if-changed=src/cli.rs");
-    println!("cargo:rerun-if-changed=man");
+    //println!("cargo:rerun-if-changed=src/cli.rs");
+    //println!("cargo:rerun-if-changed=man");
 
-    let comp_path = Path::new("completions");
-    let man_path = Path::new("man");
-    std::fs::create_dir_all(comp_path)?;
-    std::fs::create_dir_all(man_path)?;
+    let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap())
+        .ancestors()
+        .nth(3)
+        .unwrap()
+        .to_path_buf();
 
-    build_shell_completion(comp_path)?;
-    build_manpages(man_path)?;
+    let comp_path = outdir.join("completions");
+    let man_path = outdir.join("man");
+    std::fs::create_dir_all(&comp_path)?;
+    std::fs::create_dir_all(&man_path)?;
+
+    build_shell_completion(&comp_path)?;
+    build_manpages(&man_path)?;
 
     Ok(())
 }
