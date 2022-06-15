@@ -104,14 +104,6 @@ pub struct Package {
     pkg_config: Vec<Entry>,
 }
 
-macro_rules! entry {
-    ( $x:ident ) => {
-        match $x {
-            Entry::InstallEntry(entry) => entry,
-        }
-    };
-}
-
 impl Package {
     // Generate a vector of InstallTarget from a package defined in install.yml
     pub fn targets(
@@ -138,14 +130,14 @@ impl Package {
             name: &str,
             replace: FilesPolicy,
         ) -> Result<Vec<InstallTarget>> {
-            Ok(files
+            files
                 .into_iter()
                 .map(|entry| -> Result<InstallTarget> {
-                    let entry = entry!(entry);
+                    let Entry::InstallEntry(entry) = entry;
                     InstallTarget::new(entry, install_dir, replace)
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
-                .with_context(|| format!("error while iterating {} files", name))?)
+                .with_context(|| format!("error while iterating {} files", name))
         }
 
         results.extend(get_files(
@@ -313,8 +305,9 @@ impl Package {
             completions
                 .into_iter()
                 .map(|(entry, completionsdir)| -> Result<InstallTarget> {
+                    let Entry::InstallEntry(entry) = entry;
                     InstallTarget::new(
-                        entry!(entry),
+                        entry,
                         &dirs.datarootdir.join(completionsdir),
                         FilesPolicy::Replace,
                     )
