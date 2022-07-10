@@ -394,8 +394,8 @@ For documentation and examples.
 
 | | Installed in | Defaults to |
 | --- | --- | --- |
-| *system-wide* | `$sysconfdir` | `/usr/local/etc` |
-| *user-wide* | `$XDG_CONFIG_HOME` | `$HOME/.config` |
+| *system-wide* | `$sysconfdir/<pkg-name>` | `/usr/local/etc/<pkg-name>` |
+| *user-wide* | `$XDG_CONFIG_HOME/<pkg-name>` | `$HOME/.config/<pkg-name>` |
 
 For configuration files.
 

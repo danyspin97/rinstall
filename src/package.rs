@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::{
     eyre::{ensure, Context, ContextCompat},
@@ -7,6 +9,7 @@ use colored::Colorize;
 use log::warn;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
+use void::Void;
 
 use crate::install_entry::{string_or_struct, InstallEntry};
 use crate::install_target::InstallTarget;
@@ -36,11 +39,43 @@ enum Entry {
     InstallEntry(InstallEntry),
 }
 
+// DataEntry is not really a good name, it is just an Entry with use_pkg_name option
 #[derive(Deserialize)]
 #[serde(untagged)]
-enum IconEntry {
+enum DataEntry {
     #[serde(deserialize_with = "string_or_struct")]
-    Icon(Icon),
+    DataInstallEntry(DataInstallEntry),
+}
+
+#[derive(Deserialize)]
+struct DataInstallEntry {
+    #[serde(rename(deserialize = "use-pkg-name"), default = "bool_true")]
+    use_pkg_name: bool,
+    #[serde(flatten)]
+    entry: InstallEntry,
+}
+
+impl FromStr for DataInstallEntry {
+    // This implementation of `from_str` can never fail, so use the impossible
+    // `Void` type as the error type.
+    type Err = Void;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(DataInstallEntry {
+            use_pkg_name: true,
+            entry: InstallEntry::new_with_source(Utf8PathBuf::from(s)),
+        })
+    }
+}
+
+const fn bool_true() -> bool {
+    true
+}
+
+#[derive(Deserialize)]
+struct IconEntry {
+    #[serde(flatten, deserialize_with = "string_or_struct")]
+    icon: Icon,
 }
 
 #[derive(Deserialize, Default)]
@@ -75,13 +110,13 @@ pub struct Package {
     #[serde(default)]
     man: Vec<Entry>,
     #[serde(default)]
-    data: Vec<Entry>,
+    data: Vec<DataEntry>,
     #[serde(default)]
-    docs: Vec<Entry>,
+    docs: Vec<DataEntry>,
     #[serde(default)]
-    config: Vec<Entry>,
+    config: Vec<DataEntry>,
     #[serde(default, rename(deserialize = "user-config"))]
-    user_config: Vec<Entry>,
+    user_config: Vec<DataEntry>,
     #[serde(default, rename(deserialize = "desktop-files"))]
     desktop_files: Vec<Entry>,
     #[serde(default, rename(deserialize = "appstream-metadata"))]
@@ -99,7 +134,7 @@ pub struct Package {
     #[serde(default)]
     terminfo: Vec<Entry>,
     #[serde(default)]
-    licenses: Vec<Entry>,
+    licenses: Vec<DataEntry>,
     #[serde(default, rename(deserialize = "pkg-config"))]
     pkg_config: Vec<Entry>,
 }
@@ -133,11 +168,43 @@ impl Package {
             files
                 .into_iter()
                 .map(|entry| -> Result<InstallTarget> {
-                    let Entry::InstallEntry(entry) = entry;
-                    InstallTarget::new(entry, install_dir, replace)
+                    InstallTarget::new(
+                        match entry {
+                            Entry::InstallEntry(entry) => entry,
+                        },
+                        install_dir,
+                        replace,
+                    )
                 })
                 .collect::<Result<Vec<InstallTarget>>>()
                 .with_context(|| format!("error while iterating {} files", name))
+        }
+
+        fn get_files_dataentry(
+            files: Vec<DataEntry>,
+            install_dir: &Utf8Path,
+            name: &str,
+            package_name: &str,
+            replace: FilesPolicy,
+        ) -> Result<Vec<InstallTarget>> {
+            let with_pkgname = install_dir.join(&package_name);
+            files
+                .into_iter()
+                .map(|entry| -> Result<InstallTarget> {
+                    let DataEntry::DataInstallEntry(entry) = entry;
+                    // Check the use_pkg_name option for this entry
+                    // When it is enabled (which it is by default) this entry will be installed
+                    // with $install_dir/<pkg-name>/ as root director for dst
+                    let install_dir = if entry.use_pkg_name {
+                        &with_pkgname
+                    } else {
+                        install_dir
+                    };
+                    let entry = entry.entry;
+                    InstallTarget::new(entry, install_dir, replace)
+                })
+                .collect::<Result<Vec<InstallTarget>>>()
+                .with_context(|| format!("error while iterating {name} files"))
         }
 
         results.extend(get_files(
@@ -175,16 +242,18 @@ impl Package {
                 FilesPolicy::Replace,
             )?);
         }
-        results.extend(get_files(
+        results.extend(get_files_dataentry(
             self.data,
-            &dirs.datadir.join(&package_name),
+            &dirs.datadir,
             "data",
+            &package_name,
             FilesPolicy::Replace,
         )?);
-        results.extend(get_files(
+        results.extend(get_files_dataentry(
             self.config,
             &dirs.sysconfdir,
             "config",
+            &package_name,
             FilesPolicy::NoReplace,
         )?);
 
@@ -224,26 +293,38 @@ impl Package {
         }
 
         if system_install {
-            let pkg_docs = &dirs
-                .docdir
-                .as_ref()
-                .unwrap()
-                .join(Utf8Path::new(&package_name));
-            results.extend(get_files(
+            let pkg_docs = &dirs.docdir.as_ref().unwrap();
+            results.extend(get_files_dataentry(
                 self.docs,
                 pkg_docs,
                 "docs",
+                &package_name,
                 FilesPolicy::Replace,
             )?);
+            // use-pkg-name doesn't make any sense for user-config, so skip it
             results.extend(get_files(
-                self.user_config,
+                self.user_config
+                    .into_iter()
+                    .map(|entry| {
+                        Entry::InstallEntry(match entry {
+                            DataEntry::DataInstallEntry(entry) => entry.entry,
+                        })
+                    })
+                    .collect(),
                 &pkg_docs.join("user-config"),
                 "user-config",
                 FilesPolicy::Replace,
             )?);
         } else {
             results.extend(get_files(
-                self.user_config,
+                self.user_config
+                    .into_iter()
+                    .map(|entry| {
+                        Entry::InstallEntry(match entry {
+                            DataEntry::DataInstallEntry(entry) => entry.entry,
+                        })
+                    })
+                    .collect(),
                 &dirs.sysconfdir,
                 "user-config",
                 FilesPolicy::NoReplace,
@@ -371,11 +452,7 @@ impl Package {
         results.extend(
             self.icons
                 .into_iter()
-                .map(|icon| -> Icon {
-                    match icon {
-                        IconEntry::Icon(icon) => icon,
-                    }
-                })
+                .map(|icon| -> Icon { icon.icon })
                 .filter(|icon| system_install || !icon.pixmaps)
                 .map(|icon| -> Result<InstallTarget> {
                     InstallTarget::new(
@@ -434,10 +511,11 @@ impl Package {
             );
         }
 
-        results.extend(get_files(
+        results.extend(get_files_dataentry(
             self.licenses,
-            &dirs.datarootdir.join("licenses").join(&package_name),
+            &dirs.datarootdir.join("licenses"),
             "licenses",
+            &package_name,
             FilesPolicy::Replace,
         )?);
 
