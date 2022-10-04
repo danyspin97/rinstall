@@ -3,8 +3,7 @@
     version,
     author,
     about,
-    long_about = "A helper tool that installs software and additional data into the system",
-    global_setting(clap::AppSettings::DeriveDisplayOrder)
+    long_about = "A helper tool that installs software and additional data into the system"
 )]
 pub struct Opts {
     #[clap(

@@ -1,11 +1,10 @@
-use clap::{ArgEnum, IntoApp};
 use clap_complete::{generate_to, Shell};
 use clap_mangen::Man;
 use std::io::Error;
 use std::path::Path;
 use std::{fs::File, path::PathBuf};
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use serde::Deserialize;
 
 include!("src/dirs_config.rs");

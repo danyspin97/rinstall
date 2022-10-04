@@ -1,11 +1,6 @@
 #[derive(Args, Clone)]
 pub struct InstallCmd {
-    #[clap(
-        short,
-        long,
-        help = "Path to the rinstall.yml configuration",
-        from_global
-    )]
+    #[clap(help = "Path to the rinstall.yml configuration", from_global)]
     pub config: Option<String>,
     #[clap(
         long = "system",
