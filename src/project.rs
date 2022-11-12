@@ -19,13 +19,14 @@ impl Project {
         projectdir: &Utf8Path,
         is_release_tarball: bool,
         rust_debug_target: bool,
+        rust_target_triple: Option<&str>,
     ) -> Result<Self> {
         Ok(Self {
             outputdir: if is_release_tarball {
                 None
             } else {
                 match project_type {
-                    Type::Rust => Some(get_target_dir_for_rust(projectdir, rust_debug_target)?),
+                    Type::Rust => Some(get_target_dir_for_rust(projectdir, rust_debug_target, rust_target_triple)?),
                     Type::Default | Type::Custom => None,
                 }
             },
@@ -37,6 +38,7 @@ impl Project {
 fn get_target_dir_for_rust(
     projectdir: &Utf8Path,
     rust_debug_target: bool,
+    rust_target_triple: Option<&str>,
 ) -> Result<Utf8PathBuf> {
     Ok(
         // if target directory does not exist, try reading the "target_directory"
@@ -75,6 +77,11 @@ fn get_target_dir_for_rust(
         } else {
             projectdir.join("target")
         }
+        .join(if let Some(triple) = rust_target_triple {
+            triple
+        } else {
+            ""
+        })
         .join(if rust_debug_target {
             "debug"
         } else {
