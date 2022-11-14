@@ -34,6 +34,12 @@ pub struct InstallCmd {
     )]
     pub rust_debug_target: bool,
     #[clap(
+        long,
+        help = concat!("Use the generated binaries and libraries from this",
+                       " target triple (only effective for rust projects)")
+    )]
+    pub rust_target_triple: Option<String>,
+    #[clap(
         short = 'D',
         long,
         requires = "system",

@@ -82,6 +82,7 @@ impl InstallCmd {
                 Utf8Path::from_path(&self.package_dir).unwrap(),
                 is_release_tarball,
                 self.rust_debug_target,
+                self.rust_target_triple.as_deref(),
             )?;
 
             let targets = package.targets(&dirs, &version, self.system)?;
