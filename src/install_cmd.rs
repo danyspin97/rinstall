@@ -72,6 +72,14 @@ pub struct InstallCmd {
         help = "Update the current installed package"
     )]
     pub update: bool,
+    #[clap(
+        long,
+        help = concat!("Enable flags needed for packaging (enables --system",
+                       " and --skip-pkginfo, requires --destdir)"),
+        conflicts_with_all(["skip_pkg_info", "system"]),
+        requires = "destdir"
+    )]
+    pub packaging: bool,
     #[clap(flatten, next_help_heading = "DIRECTORIES")]
     pub dirs: DirsConfig,
 }
