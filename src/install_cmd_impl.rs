@@ -27,9 +27,15 @@ include!("install_cmd.rs");
 static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
 
 impl InstallCmd {
+    pub fn system(&self) -> bool {
+        self.system || self.packaging
+    }
+    pub fn skip_pkg_info(&self) -> bool {
+        self.skip_pkg_info || self.packaging
+    }
     pub fn run(self) -> Result<()> {
-        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &self.dirs)?;
-        let dirs = Dirs::new(dirs_config, self.system).context("unable to create dirs")?;
+        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system(), &self.dirs)?;
+        let dirs = Dirs::new(dirs_config, self.system()).context("unable to create dirs")?;
         let install_spec =
             InstallSpec::new_from_path(Utf8Path::from_path(&self.package_dir).unwrap())?;
 
@@ -67,7 +73,7 @@ impl InstallCmd {
                     config: None,
                     accept_changes: self.accept_changes,
                     force: self.force,
-                    system: self.system,
+                    system: self.system(),
                     prefix: None,
                     localstatedir: Some(dirs.localstatedir.as_str().to_owned()),
                     packages: vec![pkg_info.pkg_name.clone()],
@@ -85,7 +91,7 @@ impl InstallCmd {
                 self.rust_target_triple.as_deref(),
             )?;
 
-            let targets = package.targets(&dirs, &version, self.system)?;
+            let targets = package.targets(&dirs, &version, self.system())?;
 
             for target in targets {
                 self.install_target(
@@ -97,7 +103,7 @@ impl InstallCmd {
                 )?;
             }
 
-            if !self.skip_pkg_info {
+            if !self.skip_pkg_info() {
                 if self.accept_changes {
                     info!(
                         "Installing {} -> {}",
