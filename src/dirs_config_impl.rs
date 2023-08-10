@@ -31,7 +31,7 @@ impl DirsConfig {
     pub fn load(
         config: Option<&str>,
         system: bool,
-        opts: &Self,
+        opts: &mut Self,
     ) -> Result<Self> {
         let mut dirs_config = if system {
             Self::system_config()
@@ -55,6 +55,7 @@ impl DirsConfig {
             )?;
             dirs_config.merge(system, config_from_file);
         }
+        opts.sanitize();
         dirs_config.merge(system, opts.clone());
         dirs_config.replace_placeholders(system)?;
 
@@ -64,22 +65,22 @@ impl DirsConfig {
     #[must_use]
     pub fn system_config() -> Self {
         Self {
-            prefix: Some("/usr/local".to_string()),
+            prefix: Some("/usr/local/".to_string()),
             exec_prefix: Some("@prefix@".to_string()),
-            bindir: Some("@exec_prefix@/bin".to_string()),
-            sbindir: Some("@exec_prefix@/sbin".to_string()),
-            libdir: Some("@exec_prefix@/lib".to_string()),
-            libexecdir: Some("@exec_prefix@/libexec".to_string()),
-            datarootdir: Some("@prefix@/share".to_string()),
-            datadir: Some("@prefix@/share".to_string()),
-            sysconfdir: Some("@prefix@/etc".to_string()),
-            localstatedir: Some("@prefix@/var".to_string()),
-            runstatedir: Some("@localstatedir@/run".to_string()),
-            includedir: Some("@prefix@/include".to_string()),
-            docdir: Some("@datarootdir@/doc".to_string()),
-            mandir: Some("@datarootdir@/man".to_string()),
-            pam_modulesdir: Some("@libdir@/security".to_string()),
-            systemd_unitsdir: Some("@libdir@/systemd".to_string()),
+            bindir: Some("@exec_prefix@bin/".to_string()),
+            sbindir: Some("@exec_prefix@sbin/".to_string()),
+            libdir: Some("@exec_prefix@lib/".to_string()),
+            libexecdir: Some("@exec_prefix@libexec/".to_string()),
+            datarootdir: Some("@prefix@share/".to_string()),
+            datadir: Some("@prefix@share/".to_string()),
+            sysconfdir: Some("@prefix@etc/".to_string()),
+            localstatedir: Some("@prefix@var/".to_string()),
+            runstatedir: Some("@localstatedir@run/".to_string()),
+            includedir: Some("@prefix@include/".to_string()),
+            docdir: Some("@datarootdir@doc/".to_string()),
+            mandir: Some("@datarootdir@man/".to_string()),
+            pam_modulesdir: Some("@libdir@security/".to_string()),
+            systemd_unitsdir: Some("@libdir@systemd/".to_string()),
         }
     }
 
@@ -88,20 +89,20 @@ impl DirsConfig {
         Self {
             prefix: None,
             exec_prefix: None,
-            bindir: Some(".local/bin".to_string()),
+            bindir: Some(".local/bin/".to_string()),
             sbindir: None,
-            libdir: Some(".local/lib".to_string()),
-            libexecdir: Some(".local/libexec".to_string()),
-            datarootdir: Some("@XDG_DATA_HOME@".to_string()),
-            datadir: Some("@XDG_DATA_HOME@".to_string()),
-            sysconfdir: Some("@XDG_CONFIG_HOME@".to_string()),
-            localstatedir: Some("@XDG_DATA_HOME@".to_string()),
-            runstatedir: Some("@XDG_RUNTIME_DIR@".to_string()),
+            libdir: Some(".local/lib/".to_string()),
+            libexecdir: Some(".local/libexec/".to_string()),
+            datarootdir: Some("@XDG_DATA_HOME@/".to_string()),
+            datadir: Some("@XDG_DATA_HOME@/".to_string()),
+            sysconfdir: Some("@XDG_CONFIG_HOME@/".to_string()),
+            localstatedir: Some("@XDG_DATA_HOME@/".to_string()),
+            runstatedir: Some("@XDG_RUNTIME_DIR@/".to_string()),
             includedir: None,
             docdir: None,
             mandir: None,
             pam_modulesdir: None,
-            systemd_unitsdir: Some("@sysconfdir@/systemd".to_string()),
+            systemd_unitsdir: Some("@sysconfdir@/systemd/".to_string()),
         }
     }
 
@@ -248,5 +249,31 @@ impl DirsConfig {
         replace!(systemd_unitsdir, "@sysconfdir@", xdg.get_config_home());
 
         Ok(())
+    }
+
+    fn sanitize(&mut self) {
+        macro_rules! add_ending_slash {
+            ( $($var:ident),* ) => {
+                $(
+                    if let Some(path) = self.$var.as_mut() {
+                        if !path.ends_with("/") {
+                            path.push_str("/");
+                        }
+                    }
+                )*
+            };
+        }
+
+        add_ending_slash!(
+            bindir,
+            libdir,
+            libexecdir,
+            datarootdir,
+            datadir,
+            sysconfdir,
+            localstatedir,
+            runstatedir,
+            systemd_unitsdir
+        );
     }
 }

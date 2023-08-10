@@ -22,7 +22,7 @@ impl Uninstall {
         };
         opt_dirs.prefix = self.prefix.clone();
         opt_dirs.localstatedir = self.localstatedir.clone();
-        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &opt_dirs)?;
+        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &mut opt_dirs)?;
         let dirs = Dirs::new(dirs_config, self.system).context("unable to create dirs")?;
         let dry_run = !self.accept_changes;
         for pkg in &self.packages {

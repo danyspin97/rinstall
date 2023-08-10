@@ -1,4 +1,5 @@
 # 0.3.0
+
 * **Breaking changes**:
   + For `rust` packages, all the files will be searched inside of the output
     directory (usually `target`) and, if they don't exist, inside the project
@@ -6,6 +7,9 @@
     `build.rs` without adding too much clutter in the `install.yml`.
     To force rinstall to get a file in the project directory, use the
     `$PROJECTDIR` placeholder.
+* Bugfixes:
+  * Always add an ending '/' to directory paths, both in the default ones and
+   in the one read from the command line. Fixes #6.
 
 # 0.2.0
 

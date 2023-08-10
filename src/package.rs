@@ -284,7 +284,7 @@ impl Package {
                             man_cat.chars().next().unwrap().is_ascii_digit(),
                             "the last character should be a digit from 1 to 8"
                         );
-                        let install_dir = mandir.join(format!("man{}", &man_cat));
+                        let install_dir = mandir.join(format!("man{}/", &man_cat));
                         InstallTarget::new(entry, &install_dir, FilesPolicy::Replace)
                     })
                     .collect::<Result<Vec<InstallTarget>>>()
@@ -311,7 +311,7 @@ impl Package {
                         })
                     })
                     .collect(),
-                &pkg_docs.join("user-config"),
+                &pkg_docs.join("user-config/"),
                 "user-config",
                 FilesPolicy::Replace,
             )?);
@@ -333,7 +333,7 @@ impl Package {
 
         results.extend(get_files(
             self.desktop_files,
-            &dirs.datarootdir.join("applications"),
+            &dirs.datarootdir.join("applications/"),
             "desktop-files",
             FilesPolicy::Replace,
         )?);
@@ -341,7 +341,7 @@ impl Package {
         if system_install {
             results.extend(get_files(
                 self.appstream_metadata,
-                &dirs.datarootdir.join("metainfo"),
+                &dirs.datarootdir.join("metainfo/"),
                 "appstream-metadata",
                 FilesPolicy::Replace,
             )?);
@@ -355,9 +355,9 @@ impl Package {
                 (
                     completion,
                     if system_install {
-                        "bash-completion/completions"
+                        "bash-completion/completions/"
                     } else {
-                        "bash-completion"
+                        "bash-completion/"
                     },
                 )
             })
@@ -366,20 +366,20 @@ impl Package {
             self.completions
                 .elvish
                 .into_iter()
-                .map(|completion| (completion, "elvish/lib")),
+                .map(|completion| (completion, "elvish/lib/")),
         );
         if system_install {
             completions.extend(
                 self.completions
                     .fish
                     .into_iter()
-                    .map(|completion| (completion, "fish/vendor_completions.d")),
+                    .map(|completion| (completion, "fish/vendor_completions.d/")),
             );
             completions.extend(
                 self.completions
                     .zsh
                     .into_iter()
-                    .map(|completion| (completion, "zsh/site-functions")),
+                    .map(|completion| (completion, "zsh/site-functions/")),
             );
         }
         results.extend(
@@ -437,14 +437,14 @@ impl Package {
         if system_install {
             results.extend(get_files(
                 self.systemd_units,
-                &dirs.systemd_unitsdir.join("system"),
+                &dirs.systemd_unitsdir.join("system/"),
                 "systemd-units",
                 FilesPolicy::Replace,
             )?);
         }
         results.extend(get_files(
             self.systemd_user_units,
-            &dirs.systemd_unitsdir.join("user"),
+            &dirs.systemd_unitsdir.join("user/"),
             "systemd-user-units",
             FilesPolicy::Replace,
         )?);
@@ -513,7 +513,7 @@ impl Package {
 
         results.extend(get_files_dataentry(
             self.licenses,
-            &dirs.datarootdir.join("licenses"),
+            &dirs.datarootdir.join("licenses/"),
             "licenses",
             &package_name,
             FilesPolicy::Replace,
@@ -522,7 +522,7 @@ impl Package {
         if system_install {
             results.extend(get_files(
                 self.pkg_config,
-                &dirs.libdir.join("pkgconfig"),
+                &dirs.libdir.join("pkgconfig/"),
                 "pkg-config",
                 FilesPolicy::Replace,
             )?);

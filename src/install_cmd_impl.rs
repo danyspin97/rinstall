@@ -33,8 +33,8 @@ impl InstallCmd {
     pub fn skip_pkg_info(&self) -> bool {
         self.skip_pkg_info || self.packaging
     }
-    pub fn run(self) -> Result<()> {
-        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system(), &self.dirs)?;
+    pub fn run(mut self) -> Result<()> {
+        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system(), &mut self.dirs)?;
         let dirs = Dirs::new(dirs_config, self.system()).context("unable to create dirs")?;
         let install_spec =
             InstallSpec::new_from_path(Utf8Path::from_path(&self.package_dir).unwrap())?;
