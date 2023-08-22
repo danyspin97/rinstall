@@ -265,7 +265,10 @@ impl DirsConfig {
         }
 
         add_ending_slash!(
+            prefix,
+            exec_prefix,
             bindir,
+            sbindir,
             libdir,
             libexecdir,
             datarootdir,
@@ -273,6 +276,10 @@ impl DirsConfig {
             sysconfdir,
             localstatedir,
             runstatedir,
+            includedir,
+            docdir,
+            mandir,
+            pam_modulesdir,
             systemd_unitsdir
         );
     }
