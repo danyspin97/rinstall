@@ -28,7 +28,8 @@ static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
 
 impl InstallCmd {
     pub fn system(&self) -> bool {
-        self.system || self.packaging
+        // If it is being run as root, or --system / --packaging have been set
+        (unsafe { libc::getuid() } == 0) || self.system || self.packaging
     }
     pub fn skip_pkg_info(&self) -> bool {
         self.skip_pkg_info || self.packaging

@@ -15,7 +15,7 @@ include!("uninstall.rs");
 
 impl Uninstall {
     pub fn run(&self) -> Result<()> {
-        let mut opt_dirs = if self.system {
+        let mut opt_dirs = if unsafe { libc::getuid() } == 0 || self.system {
             DirsConfig::system_config()
         } else {
             DirsConfig::user_config()
