@@ -7,6 +7,8 @@
     `build.rs` without adding too much clutter in the `install.yml`.
     To force rinstall to get a file in the project directory, use the
     `$PROJECTDIR` placeholder.
+  + Don't require --system when --packaging is in use. Due to this change,
+    --system and --packaging are now conflicting.
 * Bugfixes:
   * Always add an ending '/' to directory paths, both in the default ones and
    in the one read from the command line. Fixes #6.

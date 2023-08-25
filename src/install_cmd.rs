@@ -42,7 +42,6 @@ pub struct InstallCmd {
     #[clap(
         short = 'D',
         long,
-        requires = "system",
         help = "Install all the files relative to this directory",
         env
     )]
@@ -74,8 +73,8 @@ pub struct InstallCmd {
     pub update: bool,
     #[clap(
         long,
-        help = concat!("Enable flags needed for packaging (enables --system",
-                       " and --skip-pkginfo, requires --destdir)"),
+        help = concat!("Enable packaging mode (use system directories",
+                       " enable --skip-pkginfo and requires --destdir)"),
         conflicts_with_all(["skip_pkg_info", "system"]),
         requires = "destdir"
     )]
