@@ -27,7 +27,8 @@ include!("install_cmd.rs");
 static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
 
 impl InstallCmd {
-    pub fn system(&self) -> bool {
+    // Returns true if we need to use the system directories
+    pub fn system_dirs(&self) -> bool {
         // If it is being run as root, or --system / --packaging have been set
         (unsafe { libc::getuid() } == 0) || self.system || self.packaging
     }
@@ -35,8 +36,9 @@ impl InstallCmd {
         self.skip_pkg_info || self.packaging
     }
     pub fn run(mut self) -> Result<()> {
-        let dirs_config = DirsConfig::load(self.config.as_deref(), self.system(), &mut self.dirs)?;
-        let dirs = Dirs::new(dirs_config, self.system()).context("unable to create dirs")?;
+        let dirs_config =
+            DirsConfig::load(self.config.as_deref(), self.system_dirs(), &mut self.dirs)?;
+        let dirs = Dirs::new(dirs_config, self.system_dirs()).context("unable to create dirs")?;
         let install_spec =
             InstallSpec::new_from_path(Utf8Path::from_path(&self.package_dir).unwrap())?;
 
@@ -74,7 +76,7 @@ impl InstallCmd {
                     config: None,
                     accept_changes: self.accept_changes,
                     force: self.force,
-                    system: self.system(),
+                    system: self.system_dirs(),
                     prefix: None,
                     localstatedir: Some(dirs.localstatedir.as_str().to_owned()),
                     packages: vec![pkg_info.pkg_name.clone()],
@@ -92,7 +94,7 @@ impl InstallCmd {
                 self.rust_target_triple.as_deref(),
             )?;
 
-            let targets = package.targets(&dirs, &version, self.system())?;
+            let targets = package.targets(&dirs, &version, self.system_dirs())?;
 
             for target in targets {
                 self.install_target(
