@@ -24,8 +24,6 @@ use crate::{
 
 include!("install_cmd.rs");
 
-static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
-
 impl InstallCmd {
     // Returns true if we need to use the system directories
     pub fn system_dirs(&self) -> bool {
@@ -142,22 +140,7 @@ impl InstallCmd {
         } = &install_target;
         let destination = append_destdir(destination, self.destdir.as_deref());
 
-        // The source is using the needle to force it to be in the projectdir
-        let source = if let Ok(source) = source.strip_prefix(PROJECTDIR_NEEDLE) {
-            source.to_path_buf()
-        } else if let Some(outputdir) = &project.outputdir {
-            // In this case we are checking if the source exists inside output_dir
-            // If it does we use it
-            let outputdir_source = outputdir.join(source);
-            if outputdir_source.exists() {
-                outputdir_source
-            } else {
-                source.clone()
-            }
-        } else {
-            // Otherwise we use project_dir
-            source.clone()
-        };
+        let source = install_target.get_source(project);
 
         ensure!(source.exists(), "{:?} does not exist", source);
 

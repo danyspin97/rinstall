@@ -10,6 +10,7 @@ mod package;
 mod package_info;
 mod project;
 mod simple_logger;
+mod tarball_cmd_impl;
 mod templating;
 mod uninstall_impl;
 mod utils;
@@ -27,6 +28,7 @@ pub use install_cmd_impl::InstallCmd;
 pub use opts_impl::{Opts, SubCommand};
 use package::Package;
 use simple_logger::SimpleLogger;
+pub use tarball_cmd_impl::TarballCmd;
 pub use uninstall_impl::Uninstall;
 
 fn main() -> Result<()> {
@@ -40,6 +42,7 @@ fn main() -> Result<()> {
             uninstall.run()?;
         }
         SubCommand::Install(install) => install.run()?,
+        SubCommand::Tarball(tarball) => tarball.run()?,
     }
 
     Ok(())

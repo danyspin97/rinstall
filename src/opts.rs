@@ -30,4 +30,6 @@ pub enum SubCommand {
     Install(Box<InstallCmd>),
     #[clap(about = "Uninstall the packages from the system")]
     Uninstall(Uninstall),
+    #[clap(about = "Create a tarball of the package")]
+    Tarball(Box<TarballCmd>),
 }

@@ -26,6 +26,8 @@ serde_yaml = "0.9.25"
 xdg = "2.5.2"
 walkdir = "2.3.3"
 void = "1.0.2"
+tar = "0.4.40"
+xz = "0.1.0"
 
 [build-dependencies]
 clap = { version = "4.3.21", features = ["derive", "cargo", "env"] }

@@ -4,7 +4,9 @@ use color_eyre::{
     Result,
 };
 
-use crate::install_entry::InstallEntry;
+use crate::{install_entry::InstallEntry, project::Project};
+
+static PROJECTDIR_NEEDLE: &str = "$PROJECTDIR";
 
 pub struct InstallTarget {
     pub source: Utf8PathBuf,
@@ -55,5 +57,27 @@ impl InstallTarget {
             templating: entry.templating,
             replace,
         })
+    }
+
+    pub fn get_source(
+        &self,
+        project: &Project,
+    ) -> Utf8PathBuf {
+        // The source is using the needle to force it to be in the projectdir
+        if let Ok(source) = self.source.strip_prefix(PROJECTDIR_NEEDLE) {
+            source.to_path_buf()
+        } else if let Some(outputdir) = &project.outputdir {
+            // In this case we are checking if the source exists inside output_dir
+            // If it does we use it
+            let outputdir_source = outputdir.join(self.source.clone());
+            if outputdir_source.exists() {
+                outputdir_source
+            } else {
+                self.source.to_path_buf()
+            }
+        } else {
+            // Otherwise we use project_dir
+            self.source.to_path_buf()
+        }
     }
 }
