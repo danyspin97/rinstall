@@ -10,11 +10,28 @@ use serde::Deserialize;
 
 use crate::Package;
 
+#[derive(Deserialize, Clone)]
+pub enum RinstallVersion {
+    #[serde(rename = "0.1.0")]
+    V0_1_0,
+    #[serde(rename = "0.2.0")]
+    V0_2_0,
+}
+
+impl From<&RinstallVersion> for Version {
+    fn from(val: &RinstallVersion) -> Self {
+        match val {
+            RinstallVersion::V0_1_0 => Version::new(0, 1, 0),
+            RinstallVersion::V0_2_0 => Version::new(0, 2, 0),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct InstallSpec {
     #[serde(rename(deserialize = "rinstall"))]
-    pub version: Version,
+    pub version: RinstallVersion,
     #[serde(rename(deserialize = "pkgs"))]
     pub packages: HashMap<String, Package>,
 }
@@ -41,10 +58,16 @@ impl InstallSpec {
         )?)
     }
 
+    #[cfg(target_os = "none")]
+    pub fn new_from_string(spec_file: String) -> Result<Self> {
+        Ok(serde_yaml::from_str(&spec_file)?)
+    }
+
     pub fn packages(
         self,
         selected: &[String],
     ) -> Vec<Package> {
+        // Only return packages that are selected by the user
         self.packages
             .into_iter()
             .filter(|(name, _)| selected.is_empty() || selected.iter().any(|pkg| pkg == name))

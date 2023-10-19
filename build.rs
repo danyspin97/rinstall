@@ -18,7 +18,7 @@ fn build_shell_completion(outdir: &Path) -> Result<(), Error> {
     let shells = Shell::value_variants();
 
     for shell in shells {
-        generate_to(*shell, &mut opts, "rinstall", &outdir)?;
+        generate_to(*shell, &mut opts, "rinstall", outdir)?;
     }
 
     Ok(())
@@ -28,7 +28,7 @@ fn build_manpages(outdir: &Path) -> Result<(), Error> {
     let opts = Opts::command();
 
     let file = Path::new(&outdir).join("rinstall.1");
-    let mut file = File::create(&file)?;
+    let mut file = File::create(file)?;
 
     Man::new(opts).render(&mut file)?;
 
@@ -36,8 +36,8 @@ fn build_manpages(outdir: &Path) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    //println!("cargo:rerun-if-changed=src/cli.rs");
-    //println!("cargo:rerun-if-changed=man");
+    println!("cargo:rerun-if-changed=src/cli.rs");
+    println!("cargo:rerun-if-changed=man");
 
     let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap())
         .ancestors()

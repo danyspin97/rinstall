@@ -1,42 +1,10 @@
 use std::{fmt, marker::PhantomData, str::FromStr};
 
-use camino::Utf8PathBuf;
 use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
 use void::Void;
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct InstallEntry {
-    #[serde(rename(deserialize = "src"))]
-    pub source: Utf8PathBuf,
-    #[serde(rename(deserialize = "dst"))]
-    pub destination: Option<Utf8PathBuf>,
-    #[serde(default, rename(deserialize = "tmpl"))]
-    pub templating: bool,
-}
-
-impl InstallEntry {
-    pub const fn new_with_source(source: Utf8PathBuf) -> Self {
-        Self {
-            source,
-            destination: None,
-            templating: false,
-        }
-    }
-}
-
-impl FromStr for InstallEntry {
-    // This implementation of `from_str` can never fail, so use the impossible
-    // `Void` type as the error type.
-    type Err = Void;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new_with_source(Utf8PathBuf::from(s)))
-    }
-}
 
 // https://serde.rs/string-or-struct.html
 pub fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>

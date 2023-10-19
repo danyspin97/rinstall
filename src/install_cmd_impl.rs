@@ -1,6 +1,6 @@
 use std::fs;
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::Args;
 use color_eyre::{
     eyre::{bail, ensure, Context, ContextCompat},
@@ -14,11 +14,12 @@ use crate::{
     dirs::Dirs,
     dirs_config_impl::DirsConfig,
     install_spec::InstallSpec,
-    install_target::InstallTarget,
+    install_target::InstallEntry,
+    package::{Package, Type},
     package_info::PackageInfo,
-    project::Project,
-    templating::Templating,
-    utils::{append_destdir, write_to_file},
+    project::{RustDirectories, RUST_DIRECTORIES, RUST_DIRECTORIES_ONCE},
+    templating::apply_templating,
+    utils::{append_destdir, read_file, write_to_file},
     Uninstall,
 };
 
@@ -37,293 +38,450 @@ impl InstallCmd {
         let dirs_config =
             DirsConfig::load(self.config.as_deref(), self.system_dirs(), &mut self.dirs)?;
         let dirs = Dirs::new(dirs_config, self.system_dirs()).context("unable to create dirs")?;
-        let install_spec =
-            InstallSpec::new_from_path(Utf8Path::from_path(&self.package_dir).unwrap())?;
 
-        // Check if the projectdir is a release tarball instead of the
-        // directory containing the source code
-        let is_release_tarball = self.package_dir.join(".tarball").exists();
+        // Disable the experimental tarball feature
+        #[cfg(target_os = "none")]
+        if let Some(tarball) = self.tarball.as_ref() {
+            let tarball = Utf8Path::from_path(tarball)
+                .with_context(|| format!("{tarball:?} contains invalid UTF-8 characters"))?;
+            ensure!(tarball.exists(), "{tarball} does not exists");
+
+            // Decoompress the content of the archive
+            let tarball_contents = zstd::decode_all(BufReader::new(
+                File::open(tarball).with_context(|| format!("unable to open tarball {tarball}"))?,
+            ))
+            .with_context(|| format!("unable to decompress tarball {tarball}"))?;
+
+            let cursor = Cursor::new(tarball_contents);
+            let mut archive = tar::Archive::new(cursor);
+
+            let mut tarball_entries = archive
+                .entries()
+                .context("unable to create iterator over tarball archive")?;
+            let mut entry = tarball_entries
+                .next()
+                .context("empty tarball archive")?
+                .context("invalid tarball archive")?;
+            ensure!(
+                entry
+                    .path()
+                    .context("invalid path in tarball archive")?
+                    .file_name()
+                    .context("invalid path in tarball archive")?
+                    .to_string_lossy()
+                    == "install.yml",
+                "the first file is not rinstall spec file"
+            );
+            let mut spec_file = String::new();
+            // Pass the error up with the ? operator
+            entry
+                .read_to_string(&mut spec_file)
+                .with_context(|| format!("unable to read spec file from tarball"))?;
+            let install_spec = InstallSpec::new_from_string(spec_file)?;
+            let version = install_spec.version.clone();
+
+            let packages = install_spec.packages(&self.packages);
+            // TODO
+            // Initialize project directories (only rust for now)
+            if packages.iter().find(|p| p.pkg_type == Type::Rust).is_some() {
+                RUST_DIRECTORIES_ONCE.call_once(|| {
+                    // We use call_once on std::once::Once, this is safe
+                    unsafe {
+                        RUST_DIRECTORIES = Some(
+                            RustDirectories::new(
+                            None,
+                            self.rust_debug_target,
+                            self.rust_target_triple.as_deref(),
+                        )
+                        // TODO
+                        .unwrap(),
+                        );
+                    }
+                });
+            }
+
+            for package in packages {
+                let mut pkg_installer = PackageInstaller::new(&package, &self, &dirs)
+                    .with_context(|| {
+                        format!(
+                            "failed to create package installer for package {:?}",
+                            package.name
+                        )
+                    })?;
+                let install_entries = package.targets(&dirs, &version, self.system_dirs())?;
+
+                while let Some(Ok(mut tarball_entry)) = tarball_entries.next() {
+                    let entry_path = tarball_entry
+                        .path()
+                        .context("unable to read path for tarball entry")?;
+                    let path = Utf8Path::from_path(&entry_path)
+                        .with_context(|| {
+                            format!("invalid UTF8 path for tarball entry {:?}", entry_path)
+                        })?
+                        .to_path_buf();
+
+                    // Skip entries in the tarball that are not inside the rinstall spec file
+                    // This is okay because the tarball entries list does not match the target list
+                    // i.e. a directory in the spec file will have all the corresponding files in the entries
+                    for install_entry in &install_entries {
+                        let data = if self.accept_changes {
+                            let mut buf = Vec::new();
+                            tarball_entry
+                                .read_to_end(&mut buf)
+                                .with_context(|| format!("unable to read tarball entry"))?;
+                            Some(buf)
+                        } else {
+                            None
+                        };
+                        let install_target = if install_entry.source == path {
+                            Some(
+                                InstallTarget::new_for_file(&install_entry, data).with_context(
+                                    || format!("failed to create target for file {path:?}"),
+                                )?,
+                            )
+                        } else if path.strip_prefix(&install_entry.source).is_ok() {
+                            // TODO
+                            Some(
+                                InstallTarget::new_for_directory_file(&install_entry, &path, data)
+                                    .unwrap(),
+                            )
+                        } else {
+                            None
+                        };
+                        if let Some(install_target) = install_target {
+                            pkg_installer.install_target(install_target)?;
+                        }
+                    }
+                }
+            }
+        } else {
+        }
+
+        let packagedir = Utf8Path::from_path(&self.package_dir)
+            .with_context(|| format!("{:?} contains invalid UTF-8 characters", self.package_dir))?;
+        let install_spec = InstallSpec::new_from_path(packagedir)?;
         let version = install_spec.version.clone();
 
         let packages = install_spec.packages(&self.packages);
-        for package in packages {
-            let mut pkg_info = PackageInfo::new(package.name.as_ref().unwrap(), &dirs);
-            let pkg_info_path = append_destdir(&pkg_info.path, self.destdir.as_deref());
-            let pkg_already_installed = pkg_info_path.exists();
-            info!(
-                "{} {} {}",
-                ">>>".magenta(),
-                "Package".bright_black(),
-                pkg_info.pkg_name.italic().blue()
-            );
-            if pkg_already_installed && !self.update {
-                ensure!(
-                    !self.accept_changes,
-                    "cannot install {} because it has already been installed",
-                    pkg_info.pkg_name
-                );
 
-                warn!(
-                    "package {} is already installed",
-                    pkg_info.pkg_name.blue().italic(),
-                )
-            }
-
-            if pkg_already_installed && self.update {
-                let uninstall = Uninstall {
-                    config: None,
-                    accept_changes: self.accept_changes,
-                    force: self.force,
-                    system: self.system_dirs(),
-                    prefix: None,
-                    localstatedir: Some(dirs.localstatedir.as_str().to_owned()),
-                    packages: vec![pkg_info.pkg_name.clone()],
-                };
-
-                uninstall.run()?;
-            }
-
-            let project_type = package.project_type.clone();
-            let project = Project::new_from_type(
-                project_type,
-                Utf8Path::from_path(&self.package_dir).unwrap(),
-                is_release_tarball,
-                self.rust_debug_target,
-                self.rust_target_triple.as_deref(),
-            )?;
-
-            let targets = package.targets(&dirs, &version, self.system_dirs())?;
-
-            for target in targets {
-                self.install_target(
-                    &target,
-                    &dirs,
-                    &mut pkg_info,
-                    pkg_already_installed,
-                    &project,
-                )?;
-            }
-
-            if !self.skip_pkg_info() {
-                if self.accept_changes {
-                    info!(
-                        "Installing {} -> {}",
-                        "pkginfo".purple().bold(),
-                        pkg_info_path.as_str().cyan().bold()
-                    );
-                    pkg_info.install(self.destdir.as_deref())?;
-                } else {
-                    info!(
-                        "Would install {} -> {}",
-                        "pkginfo".purple().bold(),
-                        pkg_info.path.as_str().cyan().bold()
+        if packages.iter().any(|p| p.pkg_type == Type::Rust) {
+            RUST_DIRECTORIES_ONCE.call_once(|| {
+                // We use call_once on std::once::Once, this is safe
+                unsafe {
+                    RUST_DIRECTORIES = Some(
+                        RustDirectories::new(
+                            Some(packagedir.to_owned()),
+                            self.rust_debug_target,
+                            self.rust_target_triple.as_deref(),
+                        )
+                        // TODO                       
+                        .unwrap(),
                     );
                 }
+            });
+        }
+
+        for package in packages {
+            let mut pkg_installer = PackageInstaller::new(&package, &self, &dirs)?;
+
+            let entries = package.targets(&dirs, &version, self.system_dirs())?;
+            for install_entry in entries {
+                ensure!(
+                    install_entry.full_source.exists(),
+                    "File {:?} does not exist",
+                    install_entry.source
+                );
+
+                if install_entry.full_source.is_file() {
+                    let data = if self.accept_changes {
+                        Some(read_file(
+                            &install_entry.full_source,
+                            &install_entry.source,
+                        )?)
+                    } else {
+                        None
+                    };
+                    let install_target = InstallTarget::new_for_file(&install_entry, data).unwrap();
+
+                    pkg_installer
+                        .install_target(install_target)
+                        .with_context(|| {
+                            format!("failed to install file {:?}", install_entry.full_source)
+                        })?;
+                } else if install_entry.full_source.is_dir() {
+                    WalkDir::new(&install_entry.full_source)
+                        .into_iter()
+                        .try_for_each(|entry| -> Result<()> {
+                            let entry = entry?;
+                            if !entry.file_type().is_file() {
+                                // skip directories
+                                return Ok(());
+                            }
+                            let full_file_path = Utf8Path::from_path(entry.path()).unwrap();
+
+                            let data = if self.accept_changes {
+                                Some(read_file(
+                                    &install_entry.full_source,
+                                    &install_entry.source,
+                                )?)
+                            } else {
+                                None
+                            };
+
+                            let install_target = InstallTarget::new_for_directory_file(
+                                &install_entry,
+                                full_file_path,
+                                data,
+                            )
+                            .with_context(|| {
+                                format!(
+                                    "failed to create target for file {path:?}",
+                                    path = full_file_path
+                                )
+                            })?;
+
+                            pkg_installer
+                                .install_target(install_target)
+                                .with_context(|| {
+                                    format!(
+                                        "failed to install file {:?}",
+                                        install_entry.full_source
+                                    )
+                                })?;
+
+                            Ok(())
+                        })?;
+                } else {
+                    bail!(
+                        "{:?} is neither a file nor a directory",
+                        install_entry.source
+                    );
+                }
+
+                pkg_installer.install_pkg_info()?;
             }
         }
 
         Ok(())
     }
-    pub fn install_target(
-        &self,
-        install_target: &InstallTarget,
-        dirs: &Dirs,
-        pkg_info: &mut PackageInfo,
-        pkg_already_installed: bool,
-        project: &Project,
-    ) -> Result<()> {
-        let InstallTarget {
+}
+
+struct InstallTarget {
+    source: Utf8PathBuf,
+    destination: Utf8PathBuf,
+    file_contents: Option<Vec<u8>>,
+    templating: bool,
+    replace: bool,
+}
+
+impl InstallTarget {
+    fn new_for_file(
+        entry: &InstallEntry,
+        file_contents: Option<Vec<u8>>,
+    ) -> Result<Self> {
+        let InstallEntry {
             source,
+            full_source: _full_source,
             destination,
             templating,
             replace,
-        } = &install_target;
-        let destination = append_destdir(destination, self.destdir.as_deref());
+        } = entry;
 
-        let source = install_target.get_source(project);
-
-        ensure!(source.exists(), "{:?} does not exist", source);
-
-        if source.is_file() {
-            let destination = if destination.as_str().ends_with('/') {
-                destination.join(
-                    source
-                        .file_name()
-                        .with_context(|| format!("unable to get filename for {:?}", source))?,
-                )
-            } else {
-                destination
-            };
-            // destdir conflicts with force and update-config
-            if self.destdir.is_none()
-                && self.handle_existing_files(
-                    &source,
-                    &destination,
-                    pkg_already_installed,
-                    *replace,
-                )?
-            {
-                return Ok(());
-            }
-            info!(
-                "{} {} -> {}",
-                if self.accept_changes {
-                    "Installing"
-                } else {
-                    "Would install"
-                },
+        let destination = if destination.as_str().ends_with('/') {
+            destination.join(
                 source
-                    .strip_prefix(self.package_dir.as_path())
-                    .unwrap_or(&source)
-                    .as_str()
-                    .purple()
-                    .bold(),
+                    .file_name()
+                    .with_context(|| format!("unable to get filename for {:?}", source))?,
+            )
+        } else {
+            entry.destination.to_owned()
+        };
+
+        Ok(InstallTarget {
+            source: source.clone(),
+            destination,
+            file_contents,
+            templating: *templating,
+            replace: *replace,
+        })
+    }
+
+    fn new_for_directory_file(
+        entry: &InstallEntry,
+        full_path: &Utf8Path,
+        file_contents: Option<Vec<u8>>,
+    ) -> Result<Self> {
+        let InstallEntry {
+            source,
+            full_source,
+            destination,
+            templating,
+            replace,
+        } = entry;
+
+        let relative_file_path = full_path.strip_prefix(full_source).unwrap();
+        let destination = destination.join(relative_file_path);
+
+        // read_file(&full_path, &source.join(relative_file_path))?
+
+        Ok(Self {
+            source: source.join(relative_file_path),
+            destination: destination.to_owned(),
+            file_contents,
+            templating: *templating,
+            replace: *replace,
+        })
+    }
+}
+
+struct PackageInstaller<'a> {
+    check_for_overwrite: bool,
+    dirs: &'a Dirs,
+    install_opts: &'a InstallCmd,
+    pkg_info: PackageInfo,
+}
+
+impl<'a> PackageInstaller<'a> {
+    pub fn new(
+        package: &Package,
+        install_opts: &'a InstallCmd,
+        dirs: &'a Dirs,
+    ) -> Result<Self> {
+        let pkg_info = PackageInfo::new(package.name.as_ref().unwrap(), dirs);
+        let pkg_info_path = append_destdir(&pkg_info.path, install_opts.destdir.as_deref());
+        let pkg_already_installed = pkg_info_path.exists();
+        info!(
+            "{} {} {}",
+            ">>>".magenta(),
+            "Package".bright_black(),
+            pkg_info.pkg_name.italic().blue()
+        );
+        // if this package is already installed and the user did not specify --update
+        if pkg_already_installed && !install_opts.update {
+            // check that we are running in dry-run mode
+            ensure!(
+                !install_opts.accept_changes,
+                "cannot install {} because it has already been installed",
+                pkg_info.pkg_name
+            );
+
+            warn!(
+                "package {} is already installed",
+                pkg_info.pkg_name.blue().italic(),
+            )
+        }
+        // if this package is already installed, we need to uninstall it first
+        if pkg_already_installed && install_opts.update {
+            let uninstall = Uninstall {
+                config: None,
+                accept_changes: install_opts.accept_changes,
+                force: install_opts.force,
+                system: install_opts.system_dirs(),
+                prefix: None,
+                localstatedir: Some(dirs.localstatedir.as_str().to_owned()),
+                packages: vec![pkg_info.pkg_name.clone()],
+            };
+
+            uninstall.run()?;
+        }
+
+        Ok(Self {
+            check_for_overwrite: pkg_already_installed,
+            dirs,
+            install_opts,
+            pkg_info,
+        })
+    }
+
+    fn install_target(
+        &mut self,
+        target: InstallTarget,
+    ) -> Result<()> {
+        // if we are not installing to a custom destdir and the file already exists
+        if self.install_opts.destdir.is_none() && self.handle_existing_file(&target)? {
+            return Ok(());
+        }
+
+        let destination = append_destdir(&target.destination, self.install_opts.destdir.as_deref());
+
+        if let Some(file_contents) = target.file_contents.as_ref() {
+            info!(
+                "Installing {} -> {}",
+                target.source.as_str().purple().bold(),
                 destination.as_str().cyan().bold()
             );
-            if self.accept_changes {
-                fs::create_dir_all(&destination.parent().unwrap()).with_context(|| {
-                    format!("unable to create directory {:?}", destination.parent())
+
+            self.pkg_info
+                .add_file(&target.destination, target.replace, file_contents)?;
+
+            fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
+                format!("unable to create directory {:?}", destination.parent())
+            })?;
+            if target.templating {
+                let contents = apply_templating(file_contents, self.dirs).with_context(|| {
+                    format!("unable to apply templating to {:?}", target.source)
                 })?;
-                if *templating {
-                    let mut templating = Templating::new(&source)?;
-                    templating
-                        .apply(dirs)
-                        .with_context(|| format!("unable to apply templating to {:?}", source))?;
-                    write_to_file(&destination, &templating.contents)?;
-                } else {
-                    fs::copy(&source, &destination).with_context(|| {
-                        format!("unable to copy file {:?} to {:?}", source, destination)
-                    })?;
-                }
-                let dest_wo_destdir = &self
-                    .destdir
-                    .as_ref()
-                    .map_or(destination.as_path(), |destdir| {
-                        destination.strip_prefix(&destdir).unwrap()
-                    });
-                pkg_info.add_file(&destination, dest_wo_destdir, *replace)?;
+                write_to_file(&destination, contents.as_bytes())?;
+            } else {
+                write_to_file(&destination, file_contents)?;
             }
-        } else if source.is_dir() {
-            WalkDir::new(&source)
-                .into_iter()
-                .try_for_each(|entry| -> Result<()> {
-                    let entry = entry?;
-                    if !entry.file_type().is_file() {
-                        return Ok(());
-                    }
-
-                    let full_path = Utf8Path::from_path(entry.path()).unwrap();
-                    let relative_path = full_path.strip_prefix(&source).with_context(|| {
-                        format!("unable to strip prefix {:?} from {:?}", source, full_path)
-                    })?;
-                    let source = source.join(relative_path);
-                    let destination = destination.join(relative_path);
-                    // destdir conflicts with force and update-config
-                    if self.destdir.is_none()
-                        && self.handle_existing_files(
-                            &source,
-                            &destination,
-                            pkg_already_installed,
-                            *replace,
-                        )?
-                    {
-                        return Ok(());
-                    }
-                    info!(
-                        "{} {} -> {}",
-                        if self.accept_changes {
-                            "Installing"
-                        } else {
-                            "Would install"
-                        },
-                        source
-                            .strip_prefix(&self.package_dir)
-                            .unwrap_or(&source)
-                            .as_str()
-                            .purple()
-                            .bold(),
-                        destination.as_str().cyan().bold()
-                    );
-                    if !self.accept_changes {
-                        return Ok(());
-                    }
-                    fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
-                        format!("unable to create directory {:?}", destination.parent())
-                    })?;
-                    if *templating {
-                        let mut templating = Templating::new(&source)?;
-                        templating.apply(dirs).with_context(|| {
-                            format!("unable to apply templating to {:?}", source)
-                        })?;
-                        write_to_file(&destination, &templating.contents)?;
-                    } else {
-                        fs::copy(&source, &destination).with_context(|| {
-                            format!("unable to copy file {:?} to {:?}", source, destination)
-                        })?;
-                    }
-
-                    Ok(())
-                })?;
         } else {
-            bail!("{:?} is neither a file nor a directory", source);
+            info!(
+                "Would install {} -> {}",
+                target.source.as_str().purple().bold(),
+                destination.as_str().cyan().bold()
+            );
         }
 
         Ok(())
     }
 
-    // return true if the file should be skipped
-    fn handle_existing_files(
+    /// Returns true if the file already exists and we should skip installation
+    fn handle_existing_file(
         &self,
-        source: &Utf8Path,
-        destination: &Utf8Path,
-        pkg_already_installed: bool,
-        replace: bool,
+        target: &InstallTarget,
     ) -> Result<bool> {
-        if destination.exists() && replace {
-            if !self.force {
-                if self.accept_changes {
+        let accept_changes = self.install_opts.accept_changes;
+        if target.destination.exists() && target.replace {
+            if !self.install_opts.force {
+                if accept_changes {
                     bail!(
                         "file {:?} already exists, add --force to overwrite it",
-                        destination
+                        target.destination
                     );
-                } else if !pkg_already_installed {
+                } else if !self.check_for_overwrite {
                     warn!(
                         "file {} already exists, add {} to overwrite it",
-                        destination.as_str().yellow().bold(),
+                        target.destination.as_str().yellow().bold(),
                         "--force".bright_black().italic(),
                     );
                 }
-            } else if !self.accept_changes {
+            } else if !accept_changes {
                 warn!(
                     "file {} already exists, it would be overwritten",
-                    destination.as_str().yellow().bold()
+                    target.destination.as_str().yellow().bold()
                 );
             } else {
-                warn!("file {} already exists, overwriting it", destination);
+                warn!("file {} already exists, overwriting it", target.destination);
             }
         }
-        if destination.exists() && !replace {
-            if self.update_config {
-                if self.accept_changes {
-                    warn!("config {} is being overwritten", destination);
-                } else if !pkg_already_installed {
-                    warn!("config {} will be overwritten", destination);
+        if target.destination.exists() && !target.replace {
+            if self.install_opts.update_config {
+                if accept_changes {
+                    warn!("config {} is being overwritten", target.destination);
+                } else if !self.check_for_overwrite {
+                    warn!("config {} will be overwritten", target.destination);
                 }
             } else {
                 info!(
                     "{} config {} -> {}",
-                    if self.accept_changes {
+                    if accept_changes {
                         "Skipping"
                     } else {
                         "Would skip"
-                    },
-                    source
-                        .strip_prefix(&self.package_dir)
-                        .unwrap_or(source)
-                        .as_str()
-                        .purple()
-                        .bold(),
-                    destination.as_str().cyan().bold()
+                    }, // TODO
+                    target.source.as_str().purple().bold(),
+                    target.destination.as_str().cyan().bold()
                 );
                 // Skip installation
                 return Ok(true);
@@ -331,5 +489,26 @@ impl InstallCmd {
         }
 
         Ok(false)
+    }
+
+    fn install_pkg_info(&self) -> Result<()> {
+        if !self.install_opts.skip_pkg_info() {
+            if self.install_opts.accept_changes {
+                info!(
+                    "Installing {} -> {}",
+                    "pkginfo".purple().bold(),
+                    self.pkg_info.path.as_str().cyan().bold()
+                );
+                self.pkg_info.install()?;
+            } else {
+                info!(
+                    "Would install {} -> {}",
+                    "pkginfo".purple().bold(),
+                    self.pkg_info.path.as_str().cyan().bold()
+                );
+            }
+        }
+
+        Ok(())
     }
 }

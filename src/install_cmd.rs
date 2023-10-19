@@ -48,7 +48,8 @@ pub struct InstallCmd {
     pub destdir: Option<String>,
     #[clap(
         long = "skip-pkginfo",
-        help = "Skip the installation of rinstall pkginfo, used for uninstallation"
+        help = "Skip the installation of rinstall pkginfo, used for uninstallation",
+        conflicts_with = "destdir"
     )]
     pub skip_pkg_info: bool,
     #[clap(
@@ -79,6 +80,13 @@ pub struct InstallCmd {
         requires = "destdir"
     )]
     pub packaging: bool,
+    #[clap(
+        long,
+        help = "Path to a tarball to install the package from",
+        conflicts_with = "package_dir",
+        hide = true
+    )]
+    pub tarball: Option<std::path::PathBuf>,
     #[clap(flatten, next_help_heading = "DIRECTORIES")]
     pub dirs: DirsConfig,
 }

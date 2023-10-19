@@ -28,7 +28,12 @@ pub struct TarballCmd {
     pub packages: Vec<String>,
     #[clap(
         long,
-        help = "Name of the created tarball (default to the basename of package-dir and the version)"
+        help = "Name of the inner directory inside the tarball (default to the tarball-name)"
     )]
-    pub tarball_name: Option<String>,
+    pub directory_name: Option<String>,
+    #[clap(
+        long,
+        help = "Name of the tarball to create (the suffix .tar.zstd is added automatically)"
+    )]
+    pub tarball_name: String,
 }

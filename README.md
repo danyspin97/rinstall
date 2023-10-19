@@ -65,21 +65,54 @@ $ rinstall install
 After having reviewed the changes, add `-y` or `--yes` to perform an user installation:
 
 ```
-$ rinstall install -y
+$ rinstall install --yes
 ```
 
-The same apply for performing a system-wide installation, enabled by adding `--system` flag.
-To list the changes made to the filesystem, run **rinstall** like this:
+The same apply for performing a system-wide installation, enabled by adding the
+flag `--system`. To list the changes made to the filesystem, run **rinstall** in
+dry mode (i.e. without the flag`--yes`):
 
 ```
 $ rinstall install --system
 ```
 
-To accept the changes, run again the command and append `-y` or `--yes`. You need to run
+To accept the changes, run again the command and append the flag `-y` or `--yes`. You need to run
 the command as root to apply the changes to the filestem.
 
 ```
 # rinstall install --system -y
+```
+
+### Uninstall
+
+When a package gets installed, a file with the suffix `.pkg` will be
+created inside `$localstatedir/rinstall` (by default `/usr/local/var/
+rinstall` for system installations and `$HOME/.local/share/rinstall` for user
+installations). This file will contain the list of installed files, allowing the
+the `uninstall` subcommand to revert the installation of a package:
+
+```bash
+$ rinstall uninstall wpaperd
+Would remove /home/danyspin97/.local/bin/wpaperd
+Would remove /home/danyspin97/.local/bin/wpaperctl
+Would remove /home/danyspin97/.local/share/bash-completion/wpaperd.bash
+Would remove /home/danyspin97/.local/share/licenses/wpaperd/LICENSE.md
+Would remove /home/danyspin97/.local/share/rinstall/wpaperd.pkg
+```
+
+### Packagers
+
+rinstall support the packagers use-case out of the box. When calling rinstall inside a package
+specification (i.e. spec file, `PKGBUILD`, `ebuild`), add the `--packaging` flag and it will
+enable all relevant flags and ask you the needed information:
+
+```bash
+$ rinstall install --packaging --destdir mydestdir
+>>> Package rinstall
+Would install target/release/rinstall -> mydestdir/usr/local/bin/rinstall
+Would install target/release/man/rinstall.1 -> mydestdir/usr/local/share/man/man1/rinstall.1
+Would install README.md -> mydestdir/usr/local/share/doc/rinstall/README.md
+...
 ```
 
 ### Release tarballs
@@ -92,19 +125,6 @@ the generation and include `install.yml`. **rinstall** will then assume that all
 the top directory and proceed to install them as usual; this means that for _Rust_ programs, the
 executables will be searched in the top directory instead of `target/release`. Please assure that
 all the files listed in `install.yml` are included in the tarball.
-
-### Uninstall
-
-When a package gets been installed, a `.pkg` will be installed inside `localstatedir/rinstall`.
-This file will contain the list of files so that when running the `uninstall` subcommand,
-rinstall can revert the installation of a package:
-
-```bash
-$ rinstall uninstall foo
-Would remove "/usr/local/bin/foo"
-Would remove "/usr/local/var/lib/rinstall/foo.pkg"
-```
-
 
 ## Configuration
 
@@ -186,6 +206,13 @@ The non-root user configuratione supports for the following placeholders:
 - `@XDG_STATE_HOME@`, supported in `localstatedir`
 - `@XDG_RUNTIME_DIR@`, supported in `runstatedir`
 - `@sysconfdir@`, supported in `systemd_unitsdir`
+
+### `<pkg-name>`
+
+An additional placeholder used when configuring the directories is `<pkg-
+name>`; this will automatically be replaced by the package name used inside
+`install.yml`. Some directories (e.g. `docdir` use this placeholder by default).
+Manually set the directories to remove it.
 
 ## Writing `install.yml`
 

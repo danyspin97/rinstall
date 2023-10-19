@@ -3,17 +3,24 @@ use std::{
     io::{BufWriter, Write},
 };
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use clap::Args;
 use color_eyre::{
-    eyre::{Context, ContextCompat},
+    eyre::{bail, Context, ContextCompat},
+    owo_colors::OwoColorize,
     Result,
 };
 use colored::Colorize;
 use log::info;
-use xz::write::XzEncoder;
+use walkdir::WalkDir;
 
-use crate::{dirs::Dirs, install_spec::InstallSpec, project::Project, DirsConfig};
+use crate::{
+    dirs::Dirs,
+    install_spec::InstallSpec,
+    package::Type,
+    project::{RustDirectories, RUST_DIRECTORIES, RUST_DIRECTORIES_ONCE},
+    DirsConfig,
+};
 
 include!("tarball_cmd.rs");
 
@@ -24,34 +31,49 @@ impl TarballCmd {
         let install_spec =
             InstallSpec::new_from_path(Utf8Path::from_path(&self.package_dir).unwrap())?;
 
-        let version = install_spec.version.clone();
-
         let package_dir = Utf8Path::from_path(&self.package_dir)
             .context("Package directory contains invalid UTF-8 character")?;
-        let pkg_name = package_dir
-            .file_name()
-            .context("invalid package directory")?;
-        // For the filename of the tarball, use the name of the directory where
-        // the project resides as fallback
-        let filename = self
-            .tarball_name
-            .unwrap_or_else(|| format!("{pkg_name}-{version}.tar.xz"));
+        // For the filename of the tarball append the suffix .tar.zstd
+        let filename = format!("{}.tar.zstd", self.tarball_name);
+
         info!("Creating tarball {}", filename.italic().yellow());
 
         let archive_buf: Vec<u8> = Vec::new();
         let mut archive = tar::Builder::new(archive_buf);
         archive.follow_symlinks(false);
 
+        let directory_name = self.directory_name.as_deref().unwrap_or(&self.tarball_name);
+
         // Add install.yml
         info!("Adding install.yml");
         archive
             .append_path_with_name(
                 package_dir.join("install.yml"),
-                format!("{pkg_name}-{version}/install.yml",),
+                format!("{directory_name}/install.yml",),
             )
             .context("Unable to append file install.yml to tarball")?;
 
+        let rinstall_version = install_spec.version.clone();
         let packages = install_spec.packages(&self.packages);
+
+        if packages.iter().any(|p| p.pkg_type == Type::Rust) {
+            RUST_DIRECTORIES_ONCE.call_once(|| {
+                // We use call_once on std::once::Once, this is safe
+                unsafe {
+                    RUST_DIRECTORIES = Some(
+                        RustDirectories::new(
+                                    Some(package_dir.to_path_buf())
+                            ,
+                            self.rust_debug_target,
+                            self.rust_target_triple.as_deref(),
+                        )
+                        // TODO
+                        .unwrap(),
+                    );
+                }
+            });
+        }
+
         for package in packages {
             info!(
                 "{} {} {}",
@@ -59,82 +81,77 @@ impl TarballCmd {
                 "Package".bright_black(),
                 package.name.as_ref().unwrap().italic().blue()
             );
-            let project = Project::new_from_type(
-                package.project_type.clone(),
-                Utf8Path::from_path(&self.package_dir).unwrap(),
-                false,
-                self.rust_debug_target,
-                self.rust_target_triple.as_deref(),
-            )?;
 
-            let targets = package.targets(&dirs, &version, true)?;
+            let targets = package.targets(&dirs, &rinstall_version, true)?;
 
-            for target in &targets {
-                // Discard the destination part, we'll copy the directory structure as it is
-                let source = &target.get_source(&project);
-                // Source is an absolute path, we need the path relative to
-                // package_dir to put inside the tarball
-                // It can be either inside package_dir or project.outputdir, try
-                // to remove the prefix starting from the latter
-                let relative_path = if let Some(outputdir) = project.outputdir.as_ref() {
-                    if let Ok(res) = source.strip_prefix(outputdir) {
-                        res
-                    } else {
-                        if let Ok(stripped_path) = source.strip_prefix(&package_dir) {
-                            stripped_path
-                        } else {
-                            source
-                        }
-                    }
+            for install_entry in &targets {
+                if install_entry.full_source.is_file() {
+                    // Print each file added
+                    info!("Adding {}", install_entry.source.as_str().bold().magenta());
+                    archive
+                        .append_path_with_name(
+                            &install_entry.full_source,
+                            format!("{directory_name}/{}", install_entry.source),
+                        )
+                        .with_context(|| {
+                            format!("Unable to append path {} to tarball", install_entry.source)
+                        })?;
+                } else if install_entry.full_source.is_dir() {
+                    WalkDir::new(&install_entry.full_source)
+                        .into_iter()
+                        .try_for_each(|entry| -> Result<()> {
+                            let entry = entry?;
+                            if !entry.file_type().is_file() {
+                                // skip directories
+                                return Ok(());
+                            }
+                            let full_file_path = Utf8Path::from_path(entry.path()).unwrap();
+                            // unwrap here is unsafe
+                            let relative_file_path = full_file_path
+                                .strip_prefix(&install_entry.full_source)
+                                .unwrap();
+                            let source = install_entry.source.join(relative_file_path);
+
+                            info!("Adding {}", source.as_str().bold().magenta());
+                            archive
+                                .append_path_with_name(
+                                    full_file_path,
+                                    format!("{directory_name}/{source}",),
+                                )
+                                .with_context(|| {
+                                    format!("Unable to append path {source} to tarball")
+                                })?;
+
+                            Ok(())
+                        })?;
                 } else {
-                    if let Ok(stripped_path) = source.strip_prefix(&package_dir) {
-                        stripped_path
-                    } else {
-                        source
-                    }
-                };
-                // Print each file added
-                info!(
-                    "Adding {}",
-                    source
-                        .strip_prefix(std::env::current_dir().unwrap())
-                        .unwrap_or(source)
-                        .as_str()
-                        .bold()
-                        .magenta()
-                );
-                archive
-                    .append_path_with_name(
-                        // usually entries are relative to the package_dir
-                        // they are absolute only for files contained in the outputdir folder
-                        if source.is_relative() {
-                            package_dir.join(source)
-                        } else {
-                            source.to_path_buf()
-                        },
-                        format!("{pkg_name}-{version}/{relative_path}",),
-                    )
-                    .with_context(|| {
-                        format!("Unable to append file {} to tarball", target.source)
-                    })?;
+                    bail!(
+                        "{:?} is neither a file nor a directory",
+                        install_entry.source
+                    );
+                }
             }
         }
 
-        let compressor = XzEncoder::new(
-            archive
-                .into_inner()
-                .context("unable to create the uncompressed tarball archive")?,
-            9,
-        );
         if Utf8Path::new(&filename).exists() {
             fs::remove_file(&filename)
                 .with_context(|| format!("unable to remove file {filename}"))?;
         }
         let file =
             File::create(&filename).with_context(|| format!("Unable to create file {filename}"))?;
+
+        let buf = zstd::encode_all(
+            &*archive
+                .into_inner()
+                .context("unable to create tarball")?
+                .into_boxed_slice(),
+            0,
+        )
+        .context("unable to compress tarball")?;
+
         BufWriter::new(file)
-            .write(&compressor.finish().context("Unable to compress tarball")?)
-            .with_context(|| format!("Unable to write compressed tarball into filesystem"))?;
+            .write(&buf)
+            .context("Unable to write compressed tarball into filesystem")?;
 
         Ok(())
     }

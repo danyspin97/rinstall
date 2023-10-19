@@ -11,10 +11,85 @@ use semver::{Version, VersionReq};
 use serde::Deserialize;
 use void::Void;
 
-use crate::install_entry::{string_or_struct, InstallEntry};
-use crate::install_target::InstallTarget;
-use crate::Dirs;
-use crate::{icon::Icon, install_target::FilesPolicy};
+use crate::{
+    icon::Icon,
+    install_spec::RinstallVersion,
+    install_target::FilesPolicy,
+    project::{ProjectDirectories, RUST_DIRECTORIES},
+    string_or_struct::string_or_struct,
+};
+use crate::{install_target::InstallEntry, Dirs};
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InnerEntry {
+    #[serde(rename(deserialize = "src"))]
+    pub source: Utf8PathBuf,
+    #[serde(rename(deserialize = "dst"))]
+    pub destination: Option<Utf8PathBuf>,
+    #[serde(default, rename(deserialize = "tmpl"))]
+    pub templating: bool,
+}
+
+impl InnerEntry {
+    pub const fn new_with_source(source: Utf8PathBuf) -> Self {
+        Self {
+            source,
+            destination: None,
+            templating: false,
+        }
+    }
+
+    fn new_entry(
+        self,
+        policy: FilesPolicy,
+        install_dir: &Utf8Path,
+        sourcepath: &dyn Fn(&Utf8Path) -> Utf8PathBuf,
+    ) -> Result<InstallEntry> {
+        let replace = matches!(policy, FilesPolicy::Replace);
+        ensure!(
+            self.source.is_relative(),
+            "the source file {:?} is not relative",
+            self.source
+        );
+
+        let destination =
+            if self.source.is_file() || self.destination.is_some() {
+                install_dir.join(if let Some(destination) = self.destination {
+                    ensure!(
+                        destination.is_relative(),
+                        "the destination part of a file must be relative"
+                    );
+                    destination
+                } else {
+                    Utf8PathBuf::from(self.source.file_name().with_context(|| {
+                        format!("unable to get file name from {:?}", self.source)
+                    })?)
+                })
+            } else {
+                install_dir.to_path_buf()
+            };
+
+        let full_source = sourcepath(&self.source);
+        Ok(InstallEntry {
+            source: self.source,
+            full_source,
+            destination,
+            templating: self.templating,
+            replace,
+        })
+    }
+}
+
+impl FromStr for InnerEntry {
+    // This implementation of `from_str` can never fail, so use the impossible
+    // `Void` type as the error type.
+    type Err = Void;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::new_with_source(Utf8PathBuf::from(s)))
+    }
+}
 
 #[derive(Deserialize, Clone, PartialEq, Debug)]
 pub enum Type {
@@ -33,38 +108,44 @@ impl Default for Type {
 }
 
 #[derive(Deserialize)]
-#[serde(untagged)]
-enum Entry {
+#[serde(transparent)]
+struct Entry {
     #[serde(deserialize_with = "string_or_struct")]
-    InstallEntry(InstallEntry),
+    pub entry: InnerEntry,
 }
 
 // DataEntry is not really a good name, it is just an Entry with use_pkg_name option
 #[derive(Deserialize)]
-#[serde(untagged)]
-enum DataEntry {
+#[serde(transparent)]
+struct DataEntry {
     #[serde(deserialize_with = "string_or_struct")]
-    DataInstallEntry(DataInstallEntry),
+    pub entry: InnerDataEntry,
 }
 
 #[derive(Deserialize)]
-struct DataInstallEntry {
+struct InnerDataEntry {
     #[serde(rename(deserialize = "use-pkg-name"), default = "bool_true")]
     use_pkg_name: bool,
     #[serde(flatten)]
-    entry: InstallEntry,
+    entry: InnerEntry,
 }
 
-impl FromStr for DataInstallEntry {
+impl InnerDataEntry {
+    pub fn new_with_source(s: Utf8PathBuf) -> InnerDataEntry {
+        InnerDataEntry {
+            use_pkg_name: true,
+            entry: InnerEntry::new_with_source(s),
+        }
+    }
+}
+
+impl FromStr for InnerDataEntry {
     // This implementation of `from_str` can never fail, so use the impossible
     // `Void` type as the error type.
     type Err = Void;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(DataInstallEntry {
-            use_pkg_name: true,
-            entry: InstallEntry::new_with_source(Utf8PathBuf::from(s)),
-        })
+        Ok(InnerDataEntry::new_with_source(Utf8PathBuf::from(s)))
     }
 }
 
@@ -82,13 +163,13 @@ struct IconEntry {
 #[serde(deny_unknown_fields)]
 struct Completions {
     #[serde(default)]
-    pub bash: Vec<Entry>,
+    bash: Vec<Entry>,
     #[serde(default)]
-    pub elvish: Vec<Entry>,
+    elvish: Vec<Entry>,
     #[serde(default)]
-    pub fish: Vec<Entry>,
+    fish: Vec<Entry>,
     #[serde(default)]
-    pub zsh: Vec<Entry>,
+    zsh: Vec<Entry>,
 }
 
 #[derive(Deserialize)]
@@ -96,7 +177,7 @@ struct Completions {
 pub struct Package {
     pub name: Option<String>,
     #[serde(rename(deserialize = "type"), default)]
-    pub project_type: Type,
+    pub pkg_type: Type,
     #[serde(default)]
     exe: Vec<Entry>,
     #[serde(default, rename(deserialize = "admin-exe"))]
@@ -138,80 +219,74 @@ pub struct Package {
     #[serde(default, rename(deserialize = "pkg-config"))]
     pkg_config: Vec<Entry>,
 }
+fn get_files(
+    files: Vec<Entry>,
+    install_dir: &Utf8Path,
+    name: &str,
+    replace: FilesPolicy,
+    sourcepath: &dyn Fn(&Utf8Path) -> Utf8PathBuf,
+) -> Result<Vec<InstallEntry>> {
+    files
+        .into_iter()
+        .map(|entry| -> Result<InstallEntry> {
+            entry.entry.new_entry(replace, install_dir, &sourcepath)
+        })
+        .collect::<Result<Vec<InstallEntry>>>()
+        .with_context(|| format!("error while iterating {} files", name))
+}
+fn get_files_dataentry(
+    files: Vec<DataEntry>,
+    install_dir: &Utf8Path,
+    name: &str,
+    package_name: &str,
+    replace: FilesPolicy,
+    sourcepath: &dyn Fn(&Utf8Path) -> Utf8PathBuf,
+) -> Result<Vec<InstallEntry>> {
+    let with_pkgname = install_dir.join(package_name);
+    files
+        .into_iter()
+        .map(|entry| -> Result<InstallEntry> {
+            let entry = entry.entry;
+            // Check the use_pkg_name option for this entry
+            // When it is enabled (which it is by default) this entry will be installed
+            // with $install_dir/<pkg-name>/ as root director for dst
+            let install_dir = if entry.use_pkg_name {
+                &with_pkgname
+            } else {
+                install_dir
+            };
+            entry.entry.new_entry(replace, install_dir, &sourcepath)
+        })
+        .collect::<Result<Vec<InstallEntry>>>()
+        .with_context(|| format!("error while iterating {name} files"))
+}
 
 impl Package {
-    // Generate a vector of InstallTarget from a package defined in install.yml
+    /// Generate a vector of InstallTarget from a package defined in install.yml
     pub fn targets(
         self,
         dirs: &Dirs,
-        rinstall_version: &Version,
+        rinstall_version: &RinstallVersion,
         system_install: bool,
-    ) -> Result<Vec<InstallTarget>> {
-        let allowed_version = vec!["0.1.0", "0.2.0"];
-        allowed_version
-            .iter()
-            .map(|v| Version::parse(v).unwrap())
-            .find(|v| v == rinstall_version)
-            .with_context(|| format!("{} is not a valid rinstall version", rinstall_version))?;
-
+    ) -> Result<Vec<InstallEntry>> {
         self.check_entries(rinstall_version)?;
 
         let package_name = self.name.unwrap();
         let mut results = Vec::new();
 
-        fn get_files(
-            files: Vec<Entry>,
-            install_dir: &Utf8Path,
-            name: &str,
-            replace: FilesPolicy,
-        ) -> Result<Vec<InstallTarget>> {
-            files
-                .into_iter()
-                .map(|entry| -> Result<InstallTarget> {
-                    InstallTarget::new(
-                        match entry {
-                            Entry::InstallEntry(entry) => entry,
-                        },
-                        install_dir,
-                        replace,
-                    )
-                })
-                .collect::<Result<Vec<InstallTarget>>>()
-                .with_context(|| format!("error while iterating {} files", name))
+        let sourcepath = match self.pkg_type {
+            Type::Default => todo!(),
+            Type::Rust => unsafe { RUST_DIRECTORIES.as_ref().unwrap() },
+            Type::Custom => todo!(),
         }
-
-        fn get_files_dataentry(
-            files: Vec<DataEntry>,
-            install_dir: &Utf8Path,
-            name: &str,
-            package_name: &str,
-            replace: FilesPolicy,
-        ) -> Result<Vec<InstallTarget>> {
-            let with_pkgname = install_dir.join(&package_name);
-            files
-                .into_iter()
-                .map(|entry| -> Result<InstallTarget> {
-                    let DataEntry::DataInstallEntry(entry) = entry;
-                    // Check the use_pkg_name option for this entry
-                    // When it is enabled (which it is by default) this entry will be installed
-                    // with $install_dir/<pkg-name>/ as root director for dst
-                    let install_dir = if entry.use_pkg_name {
-                        &with_pkgname
-                    } else {
-                        install_dir
-                    };
-                    let entry = entry.entry;
-                    InstallTarget::new(entry, install_dir, replace)
-                })
-                .collect::<Result<Vec<InstallTarget>>>()
-                .with_context(|| format!("error while iterating {name} files"))
-        }
+        .sourcepath();
 
         results.extend(get_files(
             self.exe,
             &dirs.bindir,
             "exe",
             FilesPolicy::Replace,
+            &sourcepath,
         )?);
 
         if let Some(sbindir) = &dirs.sbindir {
@@ -220,6 +295,7 @@ impl Package {
                 sbindir,
                 "admin_exe",
                 FilesPolicy::Replace,
+                &sourcepath,
             )?);
         }
         results.extend(get_files(
@@ -227,12 +303,14 @@ impl Package {
             &dirs.libdir,
             "libs",
             FilesPolicy::Replace,
+            &sourcepath,
         )?);
         results.extend(get_files(
             self.libexec,
             &dirs.libexecdir,
             "libexec",
             FilesPolicy::Replace,
+            &sourcepath,
         )?);
         if let Some(includedir) = &dirs.includedir {
             results.extend(get_files(
@@ -240,6 +318,7 @@ impl Package {
                 includedir,
                 "includes",
                 FilesPolicy::Replace,
+                &sourcepath,
             )?);
         }
         results.extend(get_files_dataentry(
@@ -248,6 +327,7 @@ impl Package {
             "data",
             &package_name,
             FilesPolicy::Replace,
+            &sourcepath,
         )?);
         results.extend(get_files_dataentry(
             self.config,
@@ -255,14 +335,15 @@ impl Package {
             "config",
             &package_name,
             FilesPolicy::NoReplace,
+            &sourcepath,
         )?);
 
         if let Some(mandir) = &dirs.mandir {
             results.extend(
                 self.man
                     .into_iter()
-                    .map(|entry| -> Result<InstallTarget> {
-                        let Entry::InstallEntry(entry) = entry;
+                    .map(|entry| -> Result<InstallEntry> {
+                        let entry = entry.entry;
                         ensure!(
                             !entry.source.as_str().ends_with('/'),
                             "the man entry cannot be a directory"
@@ -285,9 +366,9 @@ impl Package {
                             "the last character should be a digit from 1 to 8"
                         );
                         let install_dir = mandir.join(format!("man{}/", &man_cat));
-                        InstallTarget::new(entry, &install_dir, FilesPolicy::Replace)
+                        entry.new_entry(FilesPolicy::Replace, &install_dir, &sourcepath)
                     })
-                    .collect::<Result<Vec<InstallTarget>>>()
+                    .collect::<Result<Vec<InstallEntry>>>()
                     .context("error while iterating man pages")?,
             );
         }
@@ -300,34 +381,33 @@ impl Package {
                 "docs",
                 &package_name,
                 FilesPolicy::Replace,
+                &sourcepath,
             )?);
             // use-pkg-name doesn't make any sense for user-config, so skip it
             results.extend(get_files(
                 self.user_config
                     .into_iter()
-                    .map(|entry| {
-                        Entry::InstallEntry(match entry {
-                            DataEntry::DataInstallEntry(entry) => entry.entry,
-                        })
+                    .map(|entry| Entry {
+                        entry: entry.entry.entry,
                     })
                     .collect(),
                 &pkg_docs.join("user-config/"),
                 "user-config",
                 FilesPolicy::Replace,
+                &sourcepath,
             )?);
         } else {
             results.extend(get_files(
                 self.user_config
                     .into_iter()
-                    .map(|entry| {
-                        Entry::InstallEntry(match entry {
-                            DataEntry::DataInstallEntry(entry) => entry.entry,
-                        })
+                    .map(|entry| Entry {
+                        entry: entry.entry.entry,
                     })
                     .collect(),
                 &dirs.sysconfdir,
                 "user-config",
                 FilesPolicy::NoReplace,
+                &sourcepath,
             )?);
         }
 
@@ -336,6 +416,7 @@ impl Package {
             &dirs.datarootdir.join("applications/"),
             "desktop-files",
             FilesPolicy::Replace,
+            &sourcepath,
         )?);
 
         if system_install {
@@ -344,6 +425,7 @@ impl Package {
                 &dirs.datarootdir.join("metainfo/"),
                 "appstream-metadata",
                 FilesPolicy::Replace,
+                &sourcepath,
             )?);
         }
 
@@ -385,15 +467,15 @@ impl Package {
         results.extend(
             completions
                 .into_iter()
-                .map(|(entry, completionsdir)| -> Result<InstallTarget> {
-                    let Entry::InstallEntry(entry) = entry;
-                    InstallTarget::new(
-                        entry,
-                        &dirs.datarootdir.join(completionsdir),
+                .map(|(entry, completionsdir)| -> Result<InstallEntry> {
+                    let entry = entry.entry;
+                    entry.new_entry(
                         FilesPolicy::Replace,
+                        &dirs.datarootdir.join(completionsdir),
+                        &sourcepath,
                     )
                 })
-                .collect::<Result<Vec<InstallTarget>>>()
+                .collect::<Result<Vec<InstallEntry>>>()
                 .context("error while iterating completion files")?,
         );
 
@@ -402,11 +484,14 @@ impl Package {
                 self.pam_modules
                     .into_iter()
                     .map(|entry| {
-                        let Entry::InstallEntry(InstallEntry {
-                            source,
-                            destination,
-                            templating,
-                        }) = entry;
+                        let Entry {
+                            entry:
+                                InnerEntry {
+                                    source,
+                                    destination,
+                                    templating,
+                                },
+                        } = entry;
 
                         let destination = if destination.is_some() {
                             destination
@@ -418,18 +503,18 @@ impl Package {
                                 None
                             }
                         };
-
-                        InstallTarget::new(
-                            InstallEntry {
-                                source,
-                                destination,
-                                templating,
-                            },
-                            pam_modulesdir,
+                        InnerEntry {
+                            source,
+                            destination,
+                            templating,
+                        }
+                        .new_entry(
                             FilesPolicy::Replace,
+                            pam_modulesdir,
+                            &sourcepath,
                         )
                     })
-                    .collect::<Result<Vec<InstallTarget>>>()
+                    .collect::<Result<Vec<InstallEntry>>>()
                     .context("error while iterating pam-modules")?,
             );
         }
@@ -440,6 +525,7 @@ impl Package {
                 &dirs.systemd_unitsdir.join("system/"),
                 "systemd-units",
                 FilesPolicy::Replace,
+                &sourcepath,
             )?);
         }
         results.extend(get_files(
@@ -447,6 +533,7 @@ impl Package {
             &dirs.systemd_unitsdir.join("user/"),
             "systemd-user-units",
             FilesPolicy::Replace,
+            &sourcepath,
         )?);
 
         results.extend(
@@ -454,23 +541,24 @@ impl Package {
                 .into_iter()
                 .map(|icon| -> Icon { icon.icon })
                 .filter(|icon| system_install || !icon.pixmaps)
-                .map(|icon| -> Result<InstallTarget> {
-                    InstallTarget::new(
-                        InstallEntry {
-                            source: icon.source.clone(),
-                            destination: Some(icon.get_destination().with_context(|| {
-                                format!(
-                                    "unable to generate destination for icon {:?}",
-                                    icon.source.clone()
-                                )
-                            })?),
-                            templating: false,
-                        },
-                        &dirs.datarootdir,
+                .map(|icon| -> Result<InstallEntry> {
+                    InnerEntry {
+                        source: icon.source.clone(),
+                        destination: Some(icon.get_destination().with_context(|| {
+                            format!(
+                                "unable to generate destination for icon {:?}",
+                                icon.source.clone()
+                            )
+                        })?),
+                        templating: false,
+                    }
+                    .new_entry(
                         FilesPolicy::Replace,
+                        &dirs.datarootdir,
+                        &sourcepath,
                     )
                 })
-                .collect::<Result<Vec<InstallTarget>>>()
+                .collect::<Result<Vec<InstallEntry>>>()
                 .context("error while iterating icons")?,
         );
 
@@ -478,8 +566,8 @@ impl Package {
             results.extend(
                 self.terminfo
                     .into_iter()
-                    .map(|entry| -> Result<InstallTarget> {
-                        let Entry::InstallEntry(entry) = entry;
+                    .map(|entry| -> Result<InstallEntry> {
+                        let entry = entry.entry;
                         ensure!(
                             !entry.source.as_str().ends_with('/'),
                             "the terminfo entry cannot be a directory"
@@ -503,10 +591,10 @@ impl Package {
                             })?
                             .to_lowercase()
                             .to_string();
-                        let install_dir = dirs.datarootdir.join("terminfo").join(&initial);
-                        InstallTarget::new(entry, &install_dir, FilesPolicy::Replace)
+                        let install_dir = dirs.datarootdir.join("terminfo").join(initial);
+                        entry.new_entry(FilesPolicy::Replace, &install_dir, &sourcepath)
                     })
-                    .collect::<Result<Vec<InstallTarget>>>()
+                    .collect::<Result<Vec<InstallEntry>>>()
                     .context("error while iterating terminfo files")?,
             );
         }
@@ -517,6 +605,7 @@ impl Package {
             "licenses",
             &package_name,
             FilesPolicy::Replace,
+            &sourcepath,
         )?);
 
         if system_install {
@@ -525,6 +614,7 @@ impl Package {
                 &dirs.libdir.join("pkgconfig/"),
                 "pkg-config",
                 FilesPolicy::Replace,
+                &sourcepath,
             )?);
         }
 
@@ -533,13 +623,14 @@ impl Package {
 
     fn check_entries(
         &self,
-        rinstall_version: &Version,
+        version: &RinstallVersion,
     ) -> Result<()> {
+        let version: Version = version.into();
         macro_rules! check_version_expr {
             ( $name:literal, $type:expr, $req:literal ) => {
                 let requires = VersionReq::parse($req).unwrap();
                 ensure!(
-                    $type.is_empty() || requires.matches(&rinstall_version),
+                    $type.is_empty() || requires.matches(&version),
                     "{} requires version {}",
                     $name,
                     requires
@@ -552,10 +643,7 @@ impl Package {
             };
         }
 
-        if self.project_type == Type::Custom
-            && VersionReq::parse(">=0.2.0")
-                .unwrap()
-                .matches(rinstall_version)
+        if self.pkg_type == Type::Custom && VersionReq::parse(">=0.2.0").unwrap().matches(&version)
         {
             warn!(
                 "type '{}' has been deprecated, use '{}' or leave it empty",
