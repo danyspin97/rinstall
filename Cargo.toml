@@ -11,27 +11,30 @@ description = "Declarative install for programs"
 categories = ["command-line-utilities"]
 
 [dependencies]
-blake3 = "1.5.0"
+blake3 = "1.5.1"
 camino = { version = "1.1.6", features = [ "serde1" ] }
-clap = { version = "4.4.6", features = ["derive", "env", "wrap_help", "help", "usage", "error-context"] }
-color-eyre = { version = "0.6.2", default_features = false }
-colored = "2.0.4"
+clap = { version = "4.5.4", features = ["derive", "env", "wrap_help", "help", "usage", "error-context"] }
+color-eyre = { version = "0.6.3", default-features = false }
+colored = "2.1.0"
 json = "0.12.4"
 lazy_static = "1.4.0"
-libc = "0.2.149"
-log = { version = "0.4.20", features = [ "std" ] }
-semver = { version = "1.0.20", features = ["serde"] }
-serde = { version = "1.0.189", features = ["derive"] }
-serde_yaml = "0.9.25"
+libc = "0.2.153"
+log = { version = "0.4.21", features = [ "std" ] }
+semver = { version = "1.0.22", features = ["serde"] }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_yaml = "0.9.34"
 xdg = "2.5.2"
-walkdir = "2.4.0"
+walkdir = "2.5.0"
 void = "1.0.2"
-zstd = { version = "0.13.0", features = ["pkg-config", "experimental", "zstdmt"] }
+zstd = { version = "0.13.1", features = ["pkg-config", "experimental", "zstdmt"] }
 tar = "0.4.40"
 
 [build-dependencies]
-clap = { version = "4.4.6", features = ["derive", "cargo", "env"] }
-clap_complete = "4.4.3"
-clap_mangen = "0.2.14"
+clap = { version = "4.5.4", features = ["derive", "cargo", "env"] }
+clap_complete = "4.5.2"
+clap_mangen = "0.2.20"
 # used for the imports in src/config.rs
-serde = { version = "1.0.189", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
+
+[profile.release]
+lto = true
