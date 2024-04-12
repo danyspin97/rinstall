@@ -88,11 +88,7 @@ impl RustDirectories {
 
         // Append the target triple and debug/release
         let res = res
-            .join(if let Some(triple) = rust_target_triple {
-                triple
-            } else {
-                ""
-            })
+            .join(rust_target_triple.unwrap_or_default())
             .join(if rust_debug_target {
                 "debug"
             } else {

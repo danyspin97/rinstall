@@ -14,14 +14,14 @@ use crate::{dirs::Dirs, dirs_config_impl::DirsConfig, package_info::PackageInfo}
 include!("uninstall.rs");
 
 impl Uninstall {
-    pub fn run(&self) -> Result<()> {
+    pub fn run(self) -> Result<()> {
         let mut opt_dirs = if unsafe { libc::getuid() } == 0 || self.system {
             DirsConfig::system_config()
         } else {
             DirsConfig::user_config()
         };
-        opt_dirs.prefix = self.prefix.clone();
-        opt_dirs.localstatedir = self.localstatedir.clone();
+        opt_dirs.prefix = self.prefix;
+        opt_dirs.localstatedir = self.localstatedir;
         let dirs_config = DirsConfig::load(self.config.as_deref(), self.system, &mut opt_dirs)?;
         let dirs = Dirs::new(dirs_config, self.system).context("unable to create dirs")?;
         let dry_run = !self.accept_changes;
