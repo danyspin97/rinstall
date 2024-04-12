@@ -15,7 +15,10 @@ pub struct RustDirectories {
 }
 
 pub trait ProjectDirectories {
-    fn sourcepath(&'static self) -> Box<dyn Fn(&Utf8Path) -> Utf8PathBuf>;
+    fn sourcepath(
+        &'static self,
+        source: &Utf8Path,
+    ) -> Utf8PathBuf;
 }
 
 impl RustDirectories {
@@ -100,26 +103,27 @@ impl RustDirectories {
 }
 
 impl ProjectDirectories for RustDirectories {
-    fn sourcepath(&'static self) -> Box<dyn Fn(&Utf8Path) -> Utf8PathBuf> {
-        Box::new(|source: &Utf8Path| {
-            // Packagedir is set when we are installing from a directory
-            // It is not set when installing from a tarball
-            match (&self.packagedir, &self.outputdir) {
-                (Some(packagedir), Some(outputdir)) => {
-                    // In this case we are checking if the source exists inside output_dir
-                    // If it does we use it
-                    let outputdir_source = outputdir.join(source);
-                    if outputdir_source.exists() {
-                        outputdir_source
-                    } else {
-                        // Otherwise we use packagedir
-                        packagedir.join(source)
-                    }
+    fn sourcepath(
+        &'static self,
+        source: &Utf8Path,
+    ) -> Utf8PathBuf {
+        // Packagedir is set when we are installing from a directory
+        // It is not set when installing from a tarball
+        match (&self.packagedir, &self.outputdir) {
+            (Some(packagedir), Some(outputdir)) => {
+                // In this case we are checking if the source exists inside output_dir
+                // If it does we use it
+                let outputdir_source = outputdir.join(source);
+                if outputdir_source.exists() {
+                    outputdir_source
+                } else {
+                    // Otherwise we use packagedir
+                    packagedir.join(source)
                 }
-                (None, None) => source.to_owned(),
-                // Both are always set or not set
-                _ => unreachable!(),
             }
-        })
+            (None, None) => source.to_owned(),
+            // Both are always set or not set
+            _ => unreachable!(),
+        }
     }
 }

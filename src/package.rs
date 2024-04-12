@@ -44,7 +44,7 @@ impl InnerEntry {
         self,
         policy: FilesPolicy,
         install_dir: &Utf8Path,
-        sourcepath: &dyn Fn(&Utf8Path) -> Utf8PathBuf,
+        pkg_type: &Type,
     ) -> Result<InstallEntry> {
         let replace = matches!(policy, FilesPolicy::Replace);
         ensure!(
@@ -70,7 +70,7 @@ impl InnerEntry {
                 install_dir.to_path_buf()
             };
 
-        let full_source = sourcepath(&self.source);
+        let full_source = pkg_type.sourcepath(&self.source);
         Ok(InstallEntry {
             source: self.source,
             full_source,
@@ -91,7 +91,7 @@ impl FromStr for InnerEntry {
     }
 }
 
-#[derive(Deserialize, Clone, PartialEq, Debug)]
+#[derive(Deserialize, Clone, PartialEq, Debug, Copy)]
 pub enum Type {
     #[serde(rename(deserialize = "default"))]
     Default,
@@ -104,6 +104,20 @@ pub enum Type {
 impl Default for Type {
     fn default() -> Self {
         Self::Default
+    }
+}
+
+impl Type {
+    pub fn sourcepath(
+        self,
+        source: &Utf8Path,
+    ) -> Utf8PathBuf {
+        match self {
+            Type::Default => todo!(),
+            Type::Rust => unsafe { RUST_DIRECTORIES.as_ref().unwrap() },
+            Type::Custom => todo!(),
+        }
+        .sourcepath(source)
     }
 }
 
@@ -197,7 +211,7 @@ pub struct Package {
     #[serde(default)]
     config: Vec<DataEntry>,
     #[serde(default, rename(deserialize = "user-config"))]
-    user_config: Vec<DataEntry>,
+    user_config: Vec<Entry>,
     #[serde(default, rename(deserialize = "desktop-files"))]
     desktop_files: Vec<Entry>,
     #[serde(default, rename(deserialize = "appstream-metadata"))]
@@ -219,47 +233,6 @@ pub struct Package {
     #[serde(default, rename(deserialize = "pkg-config"))]
     pkg_config: Vec<Entry>,
 }
-fn get_files(
-    files: Vec<Entry>,
-    install_dir: &Utf8Path,
-    name: &str,
-    replace: FilesPolicy,
-    sourcepath: &dyn Fn(&Utf8Path) -> Utf8PathBuf,
-) -> Result<Vec<InstallEntry>> {
-    files
-        .into_iter()
-        .map(|entry| -> Result<InstallEntry> {
-            entry.entry.new_entry(replace, install_dir, &sourcepath)
-        })
-        .collect::<Result<Vec<InstallEntry>>>()
-        .with_context(|| format!("error while iterating {} files", name))
-}
-fn get_files_dataentry(
-    files: Vec<DataEntry>,
-    install_dir: &Utf8Path,
-    name: &str,
-    package_name: &str,
-    replace: FilesPolicy,
-    sourcepath: &dyn Fn(&Utf8Path) -> Utf8PathBuf,
-) -> Result<Vec<InstallEntry>> {
-    let with_pkgname = install_dir.join(package_name);
-    files
-        .into_iter()
-        .map(|entry| -> Result<InstallEntry> {
-            let entry = entry.entry;
-            // Check the use_pkg_name option for this entry
-            // When it is enabled (which it is by default) this entry will be installed
-            // with $install_dir/<pkg-name>/ as root director for dst
-            let install_dir = if entry.use_pkg_name {
-                &with_pkgname
-            } else {
-                install_dir
-            };
-            entry.entry.new_entry(replace, install_dir, &sourcepath)
-        })
-        .collect::<Result<Vec<InstallEntry>>>()
-        .with_context(|| format!("error while iterating {name} files"))
-}
 
 impl Package {
     /// Generate a vector of InstallTarget from a package defined in install.yml
@@ -272,71 +245,99 @@ impl Package {
         self.check_entries(rinstall_version)?;
 
         let package_name = self.name.unwrap();
-        let mut results = Vec::new();
 
-        let sourcepath = match self.pkg_type {
-            Type::Default => todo!(),
-            Type::Rust => unsafe { RUST_DIRECTORIES.as_ref().unwrap() },
-            Type::Custom => todo!(),
-        }
-        .sourcepath();
+        let empty_path = Utf8PathBuf::new();
+        let mut results = [
+            (self.exe, Some(&dirs.bindir), "exe"),
+            (self.libs, Some(&dirs.libdir), "libs"),
+            (self.libexec, Some(&dirs.libexecdir), "libexec"),
+            (self.admin_exe, dirs.sbindir.as_ref(), "admin_exe"),
+            (self.includes, dirs.includedir.as_ref(), "includes"),
+            (
+                self.desktop_files,
+                Some(&dirs.datarootdir.join("applications/")),
+                "desktop-files",
+            ),
+            (
+                self.systemd_user_units,
+                Some(&dirs.systemd_unitsdir.join("user/")),
+                "systemd-user-units",
+            ),
+        ]
+        .into_iter()
+        .flat_map(|(mut files, mut dir, name)| {
+            // Skip directories that don't exists, i.e. mandir, includedir
+            if dir.is_none() {
+                files.clear();
+                // Give an empty path to dir so that the unwrap succeeds
+                dir = Some(&empty_path);
+            }
+            let dir = dir.unwrap();
+            let pkg_type = self.pkg_type;
+            files.into_iter().map(move |entry| {
+                entry
+                    .entry
+                    .new_entry(FilesPolicy::Replace, dir, &pkg_type)
+                    .with_context(|| format!("While iterating {name} entries"))
+            })
+        })
+        .chain(
+            [
+                (
+                    self.data,
+                    Some(&dirs.datadir),
+                    "data".to_owned(),
+                    FilesPolicy::Replace,
+                ),
+                (
+                    self.config,
+                    Some(&dirs.sysconfdir),
+                    "config".to_owned(),
+                    FilesPolicy::NoReplace,
+                ),
+                (
+                    self.docs,
+                    dirs.docdir.as_ref(),
+                    "docs".to_owned(),
+                    FilesPolicy::Replace,
+                ),
+                (
+                    self.licenses,
+                    Some(&dirs.datarootdir.join("licenses/")),
+                    "licenses".to_owned(),
+                    FilesPolicy::Replace,
+                ),
+            ]
+            .into_iter()
+            .flat_map(|(mut files, mut dir, name, policy)| {
+                // Skip directories that don't exists, i.e. mandir, includedir
+                if dir.is_none() {
+                    files.clear();
+                    // Give an empty path to dir so that the unwrap succeeds
+                    dir = Some(&empty_path);
+                }
 
-        results.extend(get_files(
-            self.exe,
-            &dirs.bindir,
-            "exe",
-            FilesPolicy::Replace,
-            &sourcepath,
-        )?);
-
-        if let Some(sbindir) = &dirs.sbindir {
-            results.extend(get_files(
-                self.admin_exe,
-                sbindir,
-                "admin_exe",
-                FilesPolicy::Replace,
-                &sourcepath,
-            )?);
-        }
-        results.extend(get_files(
-            self.libs,
-            &dirs.libdir,
-            "libs",
-            FilesPolicy::Replace,
-            &sourcepath,
-        )?);
-        results.extend(get_files(
-            self.libexec,
-            &dirs.libexecdir,
-            "libexec",
-            FilesPolicy::Replace,
-            &sourcepath,
-        )?);
-        if let Some(includedir) = &dirs.includedir {
-            results.extend(get_files(
-                self.includes,
-                includedir,
-                "includes",
-                FilesPolicy::Replace,
-                &sourcepath,
-            )?);
-        }
-        results.extend(get_files_dataentry(
-            self.data,
-            &dirs.datadir,
-            "data",
-            &package_name,
-            FilesPolicy::Replace,
-            &sourcepath,
-        )?);
-        results.extend(get_files_dataentry(
-            self.config,
-            &dirs.sysconfdir,
-            "config",
-            &package_name,
-            FilesPolicy::NoReplace,
-            &sourcepath,
-        )?);
+                let dir = dir.unwrap();
+                let with_pkgname = dir.join(&package_name);
+                let pkg_type = &self.pkg_type;
+                files.into_iter().map(move |data_entry| {
+                    let entry = data_entry.entry;
+                    // Check the use_pkg_name option for this entry
+                    // When it is enabled (which it is by default) this entry will be installed
+                    // with $install_dir/<pkg-name>/ as root director for dst
+                    let dir = if entry.use_pkg_name {
+                        &with_pkgname
+                    } else {
+                        dir
+                    };
+                    entry
+                        .entry
+                        .new_entry(policy, dir, pkg_type)
+                        .with_context(|| format!("While iterating {name} entries"))
+                })
+            }),
+        )
+        .collect::<Result<Vec<InstallEntry>>>()?;
 
         if let Some(mandir) = &dirs.mandir {
             results.extend(
@@ -366,7 +367,7 @@ impl Package {
                             "the last character should be a digit from 1 to 8"
                         );
                         let install_dir = mandir.join(format!("man{}/", &man_cat));
-                        entry.new_entry(FilesPolicy::Replace, &install_dir, &sourcepath)
+                        entry.new_entry(FilesPolicy::Replace, &install_dir, &self.pkg_type)
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
                     .context("error while iterating man pages")?,
@@ -374,59 +375,49 @@ impl Package {
         }
 
         if system_install {
-            let pkg_docs = &dirs.docdir.as_ref().unwrap();
-            results.extend(get_files_dataentry(
-                self.docs,
-                pkg_docs,
-                "docs",
-                &package_name,
-                FilesPolicy::Replace,
-                &sourcepath,
-            )?);
-            // use-pkg-name doesn't make any sense for user-config, so skip it
-            results.extend(get_files(
+            results.extend(
                 self.user_config
                     .into_iter()
-                    .map(|entry| Entry {
-                        entry: entry.entry.entry,
+                    .map(|entry| {
+                        entry.entry.new_entry(
+                            FilesPolicy::Replace,
+                            &dirs.docdir.as_ref().unwrap().join("user-config"),
+                            &self.pkg_type,
+                        )
                     })
-                    .collect(),
-                &pkg_docs.join("user-config/"),
-                "user-config",
-                FilesPolicy::Replace,
-                &sourcepath,
-            )?);
+                    .collect::<Result<Vec<InstallEntry>>>()
+                    .context("error while iterating user-config entries")?,
+            );
         } else {
-            results.extend(get_files(
+            results.extend(
                 self.user_config
                     .into_iter()
-                    .map(|entry| Entry {
-                        entry: entry.entry.entry,
+                    .map(|entry| {
+                        entry.entry.new_entry(
+                            FilesPolicy::NoReplace,
+                            &dirs.sysconfdir,
+                            &self.pkg_type,
+                        )
                     })
-                    .collect(),
-                &dirs.sysconfdir,
-                "user-config",
-                FilesPolicy::NoReplace,
-                &sourcepath,
-            )?);
+                    .collect::<Result<Vec<InstallEntry>>>()
+                    .context("error while iterating user-config entries")?,
+            );
         }
 
-        results.extend(get_files(
-            self.desktop_files,
-            &dirs.datarootdir.join("applications/"),
-            "desktop-files",
-            FilesPolicy::Replace,
-            &sourcepath,
-        )?);
-
         if system_install {
-            results.extend(get_files(
-                self.appstream_metadata,
-                &dirs.datarootdir.join("metainfo/"),
-                "appstream-metadata",
-                FilesPolicy::Replace,
-                &sourcepath,
-            )?);
+            results.extend(
+                self.appstream_metadata
+                    .into_iter()
+                    .map(|entry| {
+                        entry.entry.new_entry(
+                            FilesPolicy::Replace,
+                            &dirs.datarootdir.join("metainfo/"),
+                            &self.pkg_type,
+                        )
+                    })
+                    .collect::<Result<Vec<InstallEntry>>>()
+                    .context("error while iterating appstream-metadata entries")?,
+            );
         }
 
         let mut completions = self
@@ -472,7 +463,7 @@ impl Package {
                     entry.new_entry(
                         FilesPolicy::Replace,
                         &dirs.datarootdir.join(completionsdir),
-                        &sourcepath,
+                        &self.pkg_type,
                     )
                 })
                 .collect::<Result<Vec<InstallEntry>>>()
@@ -511,7 +502,7 @@ impl Package {
                         .new_entry(
                             FilesPolicy::Replace,
                             pam_modulesdir,
-                            &sourcepath,
+                            &self.pkg_type,
                         )
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
@@ -520,21 +511,20 @@ impl Package {
         }
 
         if system_install {
-            results.extend(get_files(
-                self.systemd_units,
-                &dirs.systemd_unitsdir.join("system/"),
-                "systemd-units",
-                FilesPolicy::Replace,
-                &sourcepath,
-            )?);
+            results.extend(
+                self.systemd_units
+                    .into_iter()
+                    .map(|entry| {
+                        entry.entry.new_entry(
+                            FilesPolicy::Replace,
+                            &dirs.systemd_unitsdir.join("system/"),
+                            &self.pkg_type,
+                        )
+                    })
+                    .collect::<Result<Vec<InstallEntry>>>()
+                    .context("error while iterating systemd-units entries")?,
+            );
         }
-        results.extend(get_files(
-            self.systemd_user_units,
-            &dirs.systemd_unitsdir.join("user/"),
-            "systemd-user-units",
-            FilesPolicy::Replace,
-            &sourcepath,
-        )?);
 
         results.extend(
             self.icons
@@ -555,7 +545,7 @@ impl Package {
                     .new_entry(
                         FilesPolicy::Replace,
                         &dirs.datarootdir,
-                        &sourcepath,
+                        &self.pkg_type,
                     )
                 })
                 .collect::<Result<Vec<InstallEntry>>>()
@@ -592,30 +582,27 @@ impl Package {
                             .to_lowercase()
                             .to_string();
                         let install_dir = dirs.datarootdir.join("terminfo").join(initial);
-                        entry.new_entry(FilesPolicy::Replace, &install_dir, &sourcepath)
+                        entry.new_entry(FilesPolicy::Replace, &install_dir, &self.pkg_type)
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
                     .context("error while iterating terminfo files")?,
             );
         }
 
-        results.extend(get_files_dataentry(
-            self.licenses,
-            &dirs.datarootdir.join("licenses/"),
-            "licenses",
-            &package_name,
-            FilesPolicy::Replace,
-            &sourcepath,
-        )?);
-
         if system_install {
-            results.extend(get_files(
-                self.pkg_config,
-                &dirs.libdir.join("pkgconfig/"),
-                "pkg-config",
-                FilesPolicy::Replace,
-                &sourcepath,
-            )?);
+            results.extend(
+                self.pkg_config
+                    .into_iter()
+                    .map(|entry| {
+                        entry.entry.new_entry(
+                            FilesPolicy::Replace,
+                            &dirs.libdir.join("pkgconfig/"),
+                            &self.pkg_type,
+                        )
+                    })
+                    .collect::<Result<Vec<InstallEntry>>>()
+                    .context("error while iterating pkg-config entries")?,
+            );
         }
 
         Ok(results)
