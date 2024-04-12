@@ -257,9 +257,9 @@ impl InstallCmd {
                         install_entry.source
                     );
                 }
-
-                pkg_installer.install_pkg_info()?;
             }
+
+            pkg_installer.install_pkg_info()?;
         }
 
         Ok(())
