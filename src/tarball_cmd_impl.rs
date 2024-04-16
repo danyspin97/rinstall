@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{BufWriter, Write},
+    io::Write,
 };
 
 use camino::Utf8Path;
@@ -11,6 +11,7 @@ use color_eyre::{
     Result,
 };
 use colored::Colorize;
+use flate2::{write::GzEncoder, Compression};
 use log::info;
 use walkdir::WalkDir;
 
@@ -33,8 +34,8 @@ impl TarballCmd {
 
         let package_dir = Utf8Path::from_path(&self.package_dir)
             .context("Package directory contains invalid UTF-8 character")?;
-        // For the filename of the tarball append the suffix .tar.zstd
-        let filename = format!("{}.tar.zstd", self.tarball_name);
+        // For the filename of the tarball append the suffix .tar.gz
+        let filename = format!("{}.tar.gz", self.tarball_name);
 
         info!("Creating tarball {}", filename.italic().yellow());
 
@@ -140,17 +141,11 @@ impl TarballCmd {
         let file =
             File::create(&filename).with_context(|| format!("Unable to create file {filename}"))?;
 
-        let buf = zstd::encode_all(
-            &*archive
-                .into_inner()
-                .context("unable to create tarball")?
-                .into_boxed_slice(),
-            0,
-        )
-        .context("unable to compress tarball")?;
+        let mut encoder = GzEncoder::new(file, Compression::default());
+        //.context("unable to compress tarball")?;
 
-        BufWriter::new(file)
-            .write(&buf)
+        encoder
+            .write_all(&archive.into_inner().context("unable to create tarball")?)
             .context("Unable to write compressed tarball into filesystem")?;
 
         Ok(())

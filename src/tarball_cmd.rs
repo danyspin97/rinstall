@@ -33,7 +33,7 @@ pub struct TarballCmd {
     pub directory_name: Option<String>,
     #[clap(
         long,
-        help = "Name of the tarball to create (the suffix .tar.zstd is added automatically)"
+        help = "Name of the tarball to create (the suffix .tar.gz is added if not present)"
     )]
     pub tarball_name: String,
 }

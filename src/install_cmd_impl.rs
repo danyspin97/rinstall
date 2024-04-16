@@ -10,6 +10,7 @@ use color_eyre::{
     Result,
 };
 use colored::Colorize;
+use flate2::bufread::GzDecoder;
 use log::{info, warn};
 use walkdir::WalkDir;
 
@@ -49,12 +50,15 @@ impl InstallCmd {
             ensure!(tarball.exists(), "{tarball} does not exists");
 
             // Decoompress the content of the archive
-            let tarball_contents = zstd::decode_all(BufReader::new(
+            let mut decoder = GzDecoder::new(BufReader::new(
                 File::open(tarball).with_context(|| format!("unable to open tarball {tarball}"))?,
-            ))
-            .with_context(|| format!("unable to decompress tarball {tarball}"))?;
+            ));
+            let mut buf = Vec::new();
+            decoder
+                .read_to_end(&mut buf)
+                .with_context(|| format!("unable to decompress tarball {tarball}"))?;
 
-            let cursor = Cursor::new(tarball_contents);
+            let cursor = Cursor::new(buf);
             let mut archive = tar::Archive::new(cursor);
 
             let mut tarball_entries = archive
@@ -151,7 +155,7 @@ impl InstallCmd {
                         } else if path.strip_prefix(&install_entry.source).is_ok() {
                             // TODO
                             Some(
-                                InstallTarget::new_for_directory_file(install_entry, &path, data)
+                                InstallTarget::new_for_directory_file(install_entry, path, data)
                                     .unwrap(),
                             )
                         } else {
