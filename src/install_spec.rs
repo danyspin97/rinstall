@@ -58,7 +58,6 @@ impl InstallSpec {
         )?)
     }
 
-    #[cfg(target_os = "none")]
     pub fn new_from_string(spec_file: String) -> Result<Self> {
         Ok(serde_yaml::from_str(&spec_file)?)
     }

@@ -1,4 +1,7 @@
-use std::fs;
+use std::{
+    fs::{self, File},
+    io::{BufReader, Cursor, Read},
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Args;
@@ -40,7 +43,6 @@ impl InstallCmd {
         let dirs = Dirs::new(dirs_config, self.system_dirs()).context("unable to create dirs")?;
 
         // Disable the experimental tarball feature
-        #[cfg(target_os = "none")]
         if let Some(tarball) = self.tarball.as_ref() {
             let tarball = Utf8Path::from_path(tarball)
                 .with_context(|| format!("{tarball:?} contains invalid UTF-8 characters"))?;
@@ -76,14 +78,14 @@ impl InstallCmd {
             // Pass the error up with the ? operator
             entry
                 .read_to_string(&mut spec_file)
-                .with_context(|| format!("unable to read spec file from tarball"))?;
+                .context("unable to read spec file from tarball")?;
             let install_spec = InstallSpec::new_from_string(spec_file)?;
             let version = install_spec.version.clone();
 
             let packages = install_spec.packages(&self.packages);
             // TODO
             // Initialize project directories (only rust for now)
-            if packages.iter().find(|p| p.pkg_type == Type::Rust).is_some() {
+            if packages.iter().any(|p| p.pkg_type == Type::Rust) {
                 RUST_DIRECTORIES_ONCE.call_once(|| {
                     // We use call_once on std::once::Once, this is safe
                     unsafe {
@@ -120,6 +122,13 @@ impl InstallCmd {
                         })?
                         .to_path_buf();
 
+                    // Is equal to ["rinstall-0.3.0/rinstall", "rinstall-0.3.0", ""]
+                    let ancestors = path.ancestors().collect::<Vec<_>>();
+                    // Get the second last
+                    let prefix = ancestors[ancestors.len() - 2];
+                    // and then strip it from the path, as it's just the directory
+                    let path = path.strip_prefix(prefix).unwrap();
+
                     // Skip entries in the tarball that are not inside the rinstall spec file
                     // This is okay because the tarball entries list does not match the target list
                     // i.e. a directory in the spec file will have all the corresponding files in the entries
@@ -128,21 +137,21 @@ impl InstallCmd {
                             let mut buf = Vec::new();
                             tarball_entry
                                 .read_to_end(&mut buf)
-                                .with_context(|| format!("unable to read tarball entry"))?;
+                                .context("unable to read tarball entry")?;
                             Some(buf)
                         } else {
                             None
                         };
                         let install_target = if install_entry.source == path {
                             Some(
-                                InstallTarget::new_for_file(&install_entry, data).with_context(
+                                InstallTarget::new_for_file(install_entry, data).with_context(
                                     || format!("failed to create target for file {path:?}"),
                                 )?,
                             )
                         } else if path.strip_prefix(&install_entry.source).is_ok() {
                             // TODO
                             Some(
-                                InstallTarget::new_for_directory_file(&install_entry, &path, data)
+                                InstallTarget::new_for_directory_file(install_entry, &path, data)
                                     .unwrap(),
                             )
                         } else {
@@ -155,111 +164,112 @@ impl InstallCmd {
                 }
             }
         } else {
-        }
+            let packagedir = Utf8Path::from_path(&self.package_dir).with_context(|| {
+                format!("{:?} contains invalid UTF-8 characters", self.package_dir)
+            })?;
+            let install_spec = InstallSpec::new_from_path(packagedir)?;
+            let version = install_spec.version.clone();
 
-        let packagedir = Utf8Path::from_path(&self.package_dir)
-            .with_context(|| format!("{:?} contains invalid UTF-8 characters", self.package_dir))?;
-        let install_spec = InstallSpec::new_from_path(packagedir)?;
-        let version = install_spec.version.clone();
+            let packages = install_spec.packages(&self.packages);
 
-        let packages = install_spec.packages(&self.packages);
-
-        if packages.iter().any(|p| p.pkg_type == Type::Rust) {
-            RUST_DIRECTORIES_ONCE.call_once(|| {
-                // We use call_once on std::once::Once, this is safe
-                unsafe {
-                    RUST_DIRECTORIES = Some(
-                        RustDirectories::new(
+            if packages.iter().any(|p| p.pkg_type == Type::Rust) {
+                RUST_DIRECTORIES_ONCE.call_once(|| {
+                    // We use call_once on std::once::Once, this is safe
+                    unsafe {
+                        RUST_DIRECTORIES = Some(
+                            RustDirectories::new(
                             Some(packagedir.to_owned()),
                             self.rust_debug_target,
                             self.rust_target_triple.as_deref(),
                         )
                         // TODO                       
                         .unwrap(),
+                        );
+                    }
+                });
+            }
+
+            for package in packages {
+                let mut pkg_installer = PackageInstaller::new(&package, &self, &dirs)?;
+
+                let entries = package.targets(&dirs, &version, self.system_dirs())?;
+                for install_entry in entries {
+                    ensure!(
+                        install_entry.full_source.exists(),
+                        "File {:?} does not exist",
+                        install_entry.source
                     );
-                }
-            });
-        }
 
-        for package in packages {
-            let mut pkg_installer = PackageInstaller::new(&package, &self, &dirs)?;
+                    if install_entry.full_source.is_file() {
+                        let data = if self.accept_changes {
+                            Some(read_file(
+                                &install_entry.full_source,
+                                &install_entry.source,
+                            )?)
+                        } else {
+                            None
+                        };
+                        let install_target =
+                            InstallTarget::new_for_file(&install_entry, data).unwrap();
 
-            let entries = package.targets(&dirs, &version, self.system_dirs())?;
-            for install_entry in entries {
-                ensure!(
-                    install_entry.full_source.exists(),
-                    "File {:?} does not exist",
-                    install_entry.source
-                );
-
-                if install_entry.full_source.is_file() {
-                    let data = if self.accept_changes {
-                        Some(read_file(
-                            &install_entry.full_source,
-                            &install_entry.source,
-                        )?)
-                    } else {
-                        None
-                    };
-                    let install_target = InstallTarget::new_for_file(&install_entry, data).unwrap();
-
-                    pkg_installer
-                        .install_target(install_target)
-                        .with_context(|| {
-                            format!("failed to install file {:?}", install_entry.full_source)
-                        })?;
-                } else if install_entry.full_source.is_dir() {
-                    WalkDir::new(&install_entry.full_source)
-                        .into_iter()
-                        .try_for_each(|entry| -> Result<()> {
-                            let entry = entry?;
-                            if !entry.file_type().is_file() {
-                                // skip directories
-                                return Ok(());
-                            }
-                            let full_file_path = Utf8Path::from_path(entry.path()).unwrap();
-
-                            let data = if self.accept_changes {
-                                Some(read_file(
-                                    &install_entry.full_source,
-                                    &install_entry.source,
-                                )?)
-                            } else {
-                                None
-                            };
-
-                            let install_target = InstallTarget::new_for_directory_file(
-                                &install_entry,
-                                full_file_path,
-                                data,
-                            )
+                        pkg_installer
+                            .install_target(install_target)
                             .with_context(|| {
-                                format!(
-                                    "failed to create target for file {path:?}",
-                                    path = full_file_path
-                                )
+                                format!("failed to install file {:?}", install_entry.full_source)
                             })?;
+                    } else if install_entry.full_source.is_dir() {
+                        WalkDir::new(&install_entry.full_source)
+                            .into_iter()
+                            .try_for_each(|entry| -> Result<()> {
+                                let entry = entry?;
+                                if !entry.file_type().is_file() {
+                                    // skip directories
+                                    return Ok(());
+                                }
+                                let full_file_path = Utf8Path::from_path(entry.path()).unwrap();
 
-                            pkg_installer
-                                .install_target(install_target)
+                                let data = if self.accept_changes {
+                                    Some(read_file(
+                                        &install_entry.full_source,
+                                        &install_entry.source,
+                                    )?)
+                                } else {
+                                    None
+                                };
+
+                                let install_target = InstallTarget::new_for_directory_file(
+                                    &install_entry,
+                                    full_file_path,
+                                    data,
+                                )
                                 .with_context(|| {
                                     format!(
-                                        "failed to install file {:?}",
-                                        install_entry.full_source
+                                        "failed to create target for file {path:?}",
+                                        path = full_file_path
                                     )
                                 })?;
 
-                            Ok(())
-                        })?;
-                } else {
-                    bail!(
-                        "{:?} is neither a file nor a directory",
-                        install_entry.source
-                    );
-                }
-            }
+                                pkg_installer.install_target(install_target).with_context(
+                                    || {
+                                        format!(
+                                            "failed to install file {:?}",
+                                            install_entry.full_source
+                                        )
+                                    },
+                                )?;
 
-            pkg_installer.install_pkg_info()?;
+                                Ok(())
+                            })?;
+                    } else {
+                        bail!(
+                            "{:?} is neither a file nor a directory",
+                            install_entry.source
+                        );
+                    }
+                }
+
+                pkg_installer.install_pkg_info()?;
+            }
         }
 
         Ok(())
