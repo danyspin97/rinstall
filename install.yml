@@ -19,3 +19,7 @@ pkgs:
         - completions/rinstall.fish
       zsh:
         - completions/_rinstall
+  rinstall_rpm_macros:
+    libs:
+      - src: contrib/rpm.macros
+        dst: rpm/macros.d/macros.rinstall
