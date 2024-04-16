@@ -14,6 +14,8 @@ pub struct RustDirectories {
     pub outputdir: Option<Utf8PathBuf>,
 }
 
+pub struct DefaultProjectDirectories;
+
 pub trait ProjectDirectories {
     fn sourcepath(
         &'static self,
@@ -125,5 +127,14 @@ impl ProjectDirectories for RustDirectories {
             // Both are always set or not set
             _ => unreachable!(),
         }
+    }
+}
+
+impl ProjectDirectories for DefaultProjectDirectories {
+    fn sourcepath(
+        &'static self,
+        source: &Utf8Path,
+    ) -> Utf8PathBuf {
+        source.to_path_buf()
     }
 }

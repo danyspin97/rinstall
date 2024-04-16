@@ -15,7 +15,7 @@ use crate::{
     icon::Icon,
     install_spec::RinstallVersion,
     install_target::FilesPolicy,
-    project::{ProjectDirectories, RUST_DIRECTORIES},
+    project::{DefaultProjectDirectories, ProjectDirectories, RUST_DIRECTORIES},
     string_or_struct::string_or_struct,
 };
 use crate::{install_target::InstallEntry, Dirs};
@@ -113,11 +113,9 @@ impl Type {
         source: &Utf8Path,
     ) -> Utf8PathBuf {
         match self {
-            Type::Default => todo!(),
-            Type::Rust => unsafe { RUST_DIRECTORIES.as_ref().unwrap() },
-            Type::Custom => todo!(),
+            Type::Default | Type::Custom => DefaultProjectDirectories.sourcepath(source),
+            Type::Rust => unsafe { RUST_DIRECTORIES.as_ref().unwrap() }.sourcepath(source),
         }
-        .sourcepath(source)
     }
 }
 
