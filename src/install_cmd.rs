@@ -82,6 +82,11 @@ pub struct InstallCmd {
     pub packaging: bool,
     #[clap(
         long,
+        help = "List of the completion types to install. Possible values are: bash, elvish, fish, zsh"
+    )]
+    pub completions: Option<String>,
+    #[clap(
+        long,
         help = "Path to a tarball to install the package from",
         conflicts_with = "package_dir",
         hide = true

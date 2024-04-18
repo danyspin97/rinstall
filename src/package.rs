@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::{
-    eyre::{ensure, Context, ContextCompat},
+    eyre::{bail, ensure, Context, ContextCompat},
     Result,
 };
 use colored::Colorize;
@@ -19,6 +19,58 @@ use crate::{
     string_or_struct::string_or_struct,
 };
 use crate::{install_target::InstallEntry, Dirs};
+
+pub struct CompletionsToInstall {
+    bash: bool,
+    elvish: bool,
+    fish: bool,
+    zsh: bool,
+}
+
+impl CompletionsToInstall {
+    pub fn parse(s: &str) -> Result<Self> {
+        let mut res = Self {
+            bash: false,
+            elvish: false,
+            fish: false,
+            zsh: false,
+        };
+
+        macro_rules! completion_match {
+            ( $($completion_literal:literal, $completion:tt),* ) => {
+                for completion in s.split(",") {
+                    match completion {
+                        $(
+                            $completion_literal => {
+                                ensure!(
+                                    !res.$completion,
+                                    "{} completions has already been set in --completions",
+                                    $completion_literal
+                                );
+                                res.$completion = true;
+                            }
+                        )*
+
+                        catchall => bail!("{catchall} is not a valid completion type"),
+                    }
+                }
+            };
+        }
+
+        completion_match!("bash", bash, "elvish", elvish, "fish", fish, "zsh", zsh);
+
+        Ok(res)
+    }
+
+    pub fn all() -> Self {
+        Self {
+            bash: true,
+            elvish: true,
+            fish: true,
+            zsh: true,
+        }
+    }
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -239,6 +291,7 @@ impl Package {
         dirs: &Dirs,
         rinstall_version: &RinstallVersion,
         system_install: bool,
+        completions_to_install: &CompletionsToInstall,
     ) -> Result<Vec<InstallEntry>> {
         self.check_entries(rinstall_version)?;
 
@@ -418,40 +471,50 @@ impl Package {
             );
         }
 
-        let mut completions = self
-            .completions
-            .bash
-            .into_iter()
-            .map(|completion| {
-                (
-                    completion,
-                    if system_install {
-                        "bash-completion/completions/"
-                    } else {
-                        "bash-completion/"
-                    },
-                )
-            })
-            .collect::<Vec<(Entry, &'static str)>>();
-        completions.extend(
-            self.completions
-                .elvish
-                .into_iter()
-                .map(|completion| (completion, "elvish/lib/")),
-        );
+        let mut completions = Vec::new();
+        if completions_to_install.bash {
+            completions.extend(
+                self.completions
+                    .bash
+                    .into_iter()
+                    .map(|completion| {
+                        (
+                            completion,
+                            if system_install {
+                                "bash-completion/completions/"
+                            } else {
+                                "bash-completion/"
+                            },
+                        )
+                    })
+                    .collect::<Vec<(Entry, &'static str)>>(),
+            )
+        }
+        if completions_to_install.elvish {
+            completions.extend(
+                self.completions
+                    .elvish
+                    .into_iter()
+                    .map(|completion| (completion, "elvish/lib/")),
+            );
+        }
         if system_install {
-            completions.extend(
-                self.completions
-                    .fish
-                    .into_iter()
-                    .map(|completion| (completion, "fish/vendor_completions.d/")),
-            );
-            completions.extend(
-                self.completions
-                    .zsh
-                    .into_iter()
-                    .map(|completion| (completion, "zsh/site-functions/")),
-            );
+            if completions_to_install.fish {
+                completions.extend(
+                    self.completions
+                        .fish
+                        .into_iter()
+                        .map(|completion| (completion, "fish/vendor_completions.d/")),
+                );
+            }
+            if completions_to_install.zsh {
+                completions.extend(
+                    self.completions
+                        .zsh
+                        .into_iter()
+                        .map(|completion| (completion, "zsh/site-functions/")),
+                );
+            }
         }
         results.extend(
             completions

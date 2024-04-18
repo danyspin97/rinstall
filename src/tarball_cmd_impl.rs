@@ -18,7 +18,7 @@ use walkdir::WalkDir;
 use crate::{
     dirs::Dirs,
     install_spec::InstallSpec,
-    package::Type,
+    package::{CompletionsToInstall, Type},
     project::{RustDirectories, RUST_DIRECTORIES, RUST_DIRECTORIES_ONCE},
     DirsConfig,
 };
@@ -83,7 +83,8 @@ impl TarballCmd {
                 package.name.as_ref().unwrap().italic().blue()
             );
 
-            let targets = package.targets(&dirs, &rinstall_version, true)?;
+            let targets =
+                package.targets(&dirs, &rinstall_version, true, &CompletionsToInstall::all())?;
 
             for install_entry in &targets {
                 if install_entry.full_source.is_file() {

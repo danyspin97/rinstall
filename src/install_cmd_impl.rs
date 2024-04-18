@@ -19,7 +19,7 @@ use crate::{
     dirs_config_impl::DirsConfig,
     install_spec::InstallSpec,
     install_target::InstallEntry,
-    package::{Package, Type},
+    package::{CompletionsToInstall, Package, Type},
     package_info::PackageInfo,
     project::{RustDirectories, RUST_DIRECTORIES, RUST_DIRECTORIES_ONCE},
     templating::apply_templating,
@@ -42,6 +42,12 @@ impl InstallCmd {
         let dirs_config =
             DirsConfig::load(self.config.as_deref(), self.system_dirs(), &mut self.dirs)?;
         let dirs = Dirs::new(dirs_config, self.system_dirs()).context("unable to create dirs")?;
+
+        let completions = if let Some(completions) = self.completions.as_ref() {
+            CompletionsToInstall::parse(completions)?
+        } else {
+            CompletionsToInstall::all()
+        };
 
         // Disable the experimental tarball feature
         if let Some(tarball) = self.tarball.as_ref() {
@@ -114,7 +120,8 @@ impl InstallCmd {
                             package.name
                         )
                     })?;
-                let install_entries = package.targets(&dirs, &version, self.system_dirs())?;
+                let install_entries =
+                    package.targets(&dirs, &version, self.system_dirs(), &completions)?;
 
                 while let Some(Ok(mut tarball_entry)) = tarball_entries.next() {
                     let entry_path = tarball_entry
@@ -196,7 +203,7 @@ impl InstallCmd {
             for package in packages {
                 let mut pkg_installer = PackageInstaller::new(&package, &self, &dirs)?;
 
-                let entries = package.targets(&dirs, &version, self.system_dirs())?;
+                let entries = package.targets(&dirs, &version, self.system_dirs(), &completions)?;
                 for install_entry in entries {
                     ensure!(
                         install_entry.full_source.exists(),
