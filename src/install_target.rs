@@ -1,4 +1,4 @@
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 
 // SpecFile entries
 pub struct InstallEntry {
@@ -18,4 +18,22 @@ pub struct InstallEntry {
 pub enum FilesPolicy {
     Replace,
     NoReplace,
+}
+
+impl InstallEntry {
+    pub fn destination_for_file(&self) -> Utf8PathBuf {
+        if self.destination.as_str().ends_with('/') {
+            self.destination.join(self.source.file_name().unwrap())
+        } else {
+            self.destination.to_owned()
+        }
+    }
+
+    pub fn destination_for_file_in_directory(
+        &self,
+        full_path: &Utf8Path,
+    ) -> Utf8PathBuf {
+        let relative_file_path = full_path.strip_prefix(&self.full_source).unwrap();
+        self.destination.join(relative_file_path)
+    }
 }

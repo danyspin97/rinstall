@@ -23,7 +23,7 @@ use crate::{
     package_info::PackageInfo,
     project::{RustDirectories, RUST_DIRECTORIES, RUST_DIRECTORIES_ONCE},
     templating::apply_templating,
-    utils::{append_destdir, read_file, write_to_file},
+    utils::{append_destdir, write_to_file},
     Uninstall,
 };
 
@@ -144,32 +144,29 @@ impl InstallCmd {
                     // This is okay because the tarball entries list does not match the target list
                     // i.e. a directory in the spec file will have all the corresponding files in the entries
                     for install_entry in &install_entries {
-                        let data = if self.accept_changes {
-                            let mut buf = Vec::new();
-                            tarball_entry
-                                .read_to_end(&mut buf)
-                                .context("unable to read tarball entry")?;
-                            Some(buf)
+                        let destination = if install_entry.source == path {
+                            Some(install_entry.destination_for_file())
+                        } else if let Ok(strip_prefix) = path.strip_prefix(&install_entry.source) {
+                            Some(install_entry.destination.join(strip_prefix))
                         } else {
                             None
                         };
-                        let install_target = if install_entry.source == path {
-                            Some(
-                                InstallTarget::new_for_file(install_entry, data).with_context(
-                                    || format!("failed to create target for file {path:?}"),
-                                )?,
-                            )
-                        } else if path.strip_prefix(&install_entry.source).is_ok() {
-                            // TODO
-                            Some(
-                                InstallTarget::new_for_directory_file(install_entry, path, data)
-                                    .unwrap(),
-                            )
-                        } else {
-                            None
-                        };
-                        if let Some(install_target) = install_target {
-                            pkg_installer.install_target(install_target)?;
+                        if let Some(destination) = destination {
+                            let installer = |destination| -> Result<()> {
+                                // unpack_in returns true if the entry was unpacked
+                                // false if the entry contains '..' and thus was not packed
+                                match tarball_entry.unpack_in(destination)? {
+                                    true => Err(color_eyre::eyre::anyhow!("path contains '..'")),
+                                    false => Ok(()),
+                                }
+                            };
+                            pkg_installer.install_target(
+                                install_entry,
+                                destination,
+                                self.accept_changes,
+                                installer,
+                            )?;
+                            continue;
                         }
                     }
                 }
@@ -212,19 +209,25 @@ impl InstallCmd {
                     );
 
                     if install_entry.full_source.is_file() {
-                        let data = if self.accept_changes {
-                            Some(read_file(
-                                &install_entry.full_source,
-                                &install_entry.source,
-                            )?)
-                        } else {
-                            None
+                        let destination = install_entry.destination_for_file();
+                        let installer = |destination| -> Result<()> {
+                            std::fs::copy(&install_entry.full_source, &destination)
+                                .with_context(|| {
+                                    format!(
+                                        "unable to copy file {} to {destination}",
+                                        install_entry.full_source
+                                    )
+                                })
+                                .map(|_| ())
                         };
-                        let install_target =
-                            InstallTarget::new_for_file(&install_entry, data).unwrap();
 
                         pkg_installer
-                            .install_target(install_target)
+                            .install_target(
+                                &install_entry,
+                                destination,
+                                self.accept_changes,
+                                installer,
+                            )
                             .with_context(|| {
                                 format!("failed to install file {:?}", install_entry.full_source)
                             })?;
@@ -239,35 +242,32 @@ impl InstallCmd {
                                 }
                                 let full_file_path = Utf8Path::from_path(entry.path()).unwrap();
 
-                                let data = if self.accept_changes {
-                                    Some(read_file(
-                                        &install_entry.full_source,
-                                        &install_entry.source,
-                                    )?)
-                                } else {
-                                    None
+                                let destination =
+                                    install_entry.destination_for_file_in_directory(full_file_path);
+                                let installer = |destination| -> Result<()> {
+                                    std::fs::copy(&install_entry.full_source, &destination)
+                                        .with_context(|| {
+                                            format!(
+                                                "unable to copy file {} to {destination}",
+                                                install_entry.full_source
+                                            )
+                                        })
+                                        .map(|_| ())
                                 };
 
-                                let install_target = InstallTarget::new_for_directory_file(
-                                    &install_entry,
-                                    full_file_path,
-                                    data,
-                                )
-                                .with_context(|| {
-                                    format!(
-                                        "failed to create target for file {path:?}",
-                                        path = full_file_path
+                                pkg_installer
+                                    .install_target(
+                                        &install_entry,
+                                        destination,
+                                        self.accept_changes,
+                                        installer,
                                     )
-                                })?;
-
-                                pkg_installer.install_target(install_target).with_context(
-                                    || {
+                                    .with_context(|| {
                                         format!(
                                             "failed to install file {:?}",
                                             install_entry.full_source
                                         )
-                                    },
-                                )?;
+                                    })?;
 
                                 Ok(())
                             })?;
@@ -284,74 +284,6 @@ impl InstallCmd {
         }
 
         Ok(())
-    }
-}
-
-struct InstallTarget {
-    source: Utf8PathBuf,
-    destination: Utf8PathBuf,
-    file_contents: Option<Vec<u8>>,
-    templating: bool,
-    replace: bool,
-}
-
-impl InstallTarget {
-    fn new_for_file(
-        entry: &InstallEntry,
-        file_contents: Option<Vec<u8>>,
-    ) -> Result<Self> {
-        let InstallEntry {
-            source,
-            full_source: _full_source,
-            destination,
-            templating,
-            replace,
-        } = entry;
-
-        let destination = if destination.as_str().ends_with('/') {
-            destination.join(
-                source
-                    .file_name()
-                    .with_context(|| format!("unable to get filename for {:?}", source))?,
-            )
-        } else {
-            entry.destination.to_owned()
-        };
-
-        Ok(InstallTarget {
-            source: source.clone(),
-            destination,
-            file_contents,
-            templating: *templating,
-            replace: *replace,
-        })
-    }
-
-    fn new_for_directory_file(
-        entry: &InstallEntry,
-        full_path: &Utf8Path,
-        file_contents: Option<Vec<u8>>,
-    ) -> Result<Self> {
-        let InstallEntry {
-            source,
-            full_source,
-            destination,
-            templating,
-            replace,
-        } = entry;
-
-        let relative_file_path = full_path.strip_prefix(full_source).unwrap();
-        let destination = destination.join(relative_file_path);
-
-        // read_file(&full_path, &source.join(relative_file_path))?
-
-        Ok(Self {
-            source: source.join(relative_file_path),
-            destination: destination.to_owned(),
-            file_contents,
-            templating: *templating,
-            replace: *replace,
-        })
     }
 }
 
@@ -414,38 +346,44 @@ impl<'a> PackageInstaller<'a> {
         })
     }
 
-    fn install_target(
+    fn install_target<F>(
         &mut self,
-        target: InstallTarget,
-    ) -> Result<()> {
+        target: &InstallEntry,
+        destination: Utf8PathBuf,
+        accept_changes: bool,
+        mut installer: F,
+    ) -> Result<()>
+    where
+        F: FnMut(Utf8PathBuf) -> Result<()>,
+    {
         // if we are not installing to a custom destdir and the file already exists
-        if self.install_opts.destdir.is_none() && self.handle_existing_file(&target)? {
+        if self.install_opts.destdir.is_none() && self.handle_existing_file(target, &destination)? {
             return Ok(());
         }
 
-        let destination = append_destdir(&target.destination, self.install_opts.destdir.as_deref());
+        let destination_destdir =
+            append_destdir(&destination, self.install_opts.destdir.as_deref());
 
-        if let Some(file_contents) = target.file_contents.as_ref() {
+        if accept_changes {
             info!(
                 "Installing {} -> {}",
                 target.source.as_str().purple().bold(),
-                destination.as_str().cyan().bold()
+                destination_destdir.as_str().cyan().bold()
             );
 
-            self.pkg_info
-                .add_file(&target.destination, target.replace, file_contents)?;
-
-            fs::create_dir_all(destination.parent().unwrap()).with_context(|| {
-                format!("unable to create directory {:?}", destination.parent())
+            fs::create_dir_all(destination_destdir.parent().unwrap()).with_context(|| {
+                format!(
+                    "unable to create directory {:?}",
+                    destination_destdir.parent()
+                )
             })?;
-            if target.templating {
-                let contents = apply_templating(file_contents, self.dirs).with_context(|| {
-                    format!("unable to apply templating to {:?}", target.source)
-                })?;
-                write_to_file(&destination, contents.as_bytes())?;
-            } else {
-                write_to_file(&destination, file_contents)?;
-            }
+
+            installer(destination_destdir.clone())?;
+
+            self.apply_templating(target)?;
+
+            self.pkg_info
+                .add_file(&destination, &destination_destdir, target.replace)?;
         } else {
             info!(
                 "Would install {} -> {}",
@@ -457,39 +395,58 @@ impl<'a> PackageInstaller<'a> {
         Ok(())
     }
 
+    fn apply_templating(
+        &self,
+        entry: &InstallEntry,
+    ) -> Result<()> {
+        if entry.templating {
+            let mut file = File::open(&entry.destination)
+                .with_context(|| format!("unable to open file {:?}", entry.destination))?;
+            let mut file_contents = Vec::new();
+            file.read_to_end(&mut file_contents)
+                .with_context(|| format!("unable to read file {:?}", entry.destination))?;
+            let contents = apply_templating(&file_contents, self.dirs)
+                .with_context(|| format!("unable to apply templating to {:?}", entry.source))?;
+            write_to_file(&entry.destination, contents.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
     /// Returns true if the file already exists and we should skip installation
     fn handle_existing_file(
         &self,
-        target: &InstallTarget,
+        target: &InstallEntry,
+        destination: &Utf8Path,
     ) -> Result<bool> {
         let accept_changes = self.install_opts.accept_changes;
-        if target.destination.exists() && target.replace {
+        if destination.exists() && target.replace {
             if !self.install_opts.force {
                 if accept_changes {
                     bail!(
                         "file {:?} already exists, add --force to overwrite it",
-                        target.destination
+                        destination
                     );
                 } else if !self.check_for_overwrite {
                     warn!(
                         "file {} already exists, add {} to overwrite it",
-                        target.destination.as_str().yellow().bold(),
+                        destination.as_str().yellow().bold(),
                         "--force".bright_black().italic(),
                     );
                 }
             } else if !accept_changes {
                 warn!(
                     "file {} already exists, it would be overwritten",
-                    target.destination.as_str().yellow().bold()
+                    destination.as_str().yellow().bold()
                 );
             } else {
-                warn!("file {} already exists, overwriting it", target.destination);
+                warn!("file {} already exists, overwriting it", destination);
             }
         }
-        if target.destination.exists() && !target.replace {
+        if destination.exists() && !target.replace {
             if self.install_opts.update_config {
                 if accept_changes {
-                    warn!("config {} is being overwritten", target.destination);
+                    warn!("config {} is being overwritten", destination);
                 } else if !self.check_for_overwrite {
                     warn!("config {} will be overwritten", target.destination);
                 }
@@ -502,7 +459,7 @@ impl<'a> PackageInstaller<'a> {
                         "Would skip"
                     }, // TODO
                     target.source.as_str().purple().bold(),
-                    target.destination.as_str().cyan().bold()
+                    destination.as_str().cyan().bold()
                 );
                 // Skip installation
                 return Ok(true);

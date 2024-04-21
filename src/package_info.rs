@@ -1,10 +1,13 @@
-use std::fs;
+use std::{
+    fs::{self, File},
+    io::Write,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::{eyre::Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::{dirs::Dirs, utils::write_to_file};
+use crate::dirs::Dirs;
 
 #[derive(Serialize, Deserialize)]
 pub struct InstalledFile {
@@ -50,13 +53,15 @@ impl PackageInfo {
 
     pub fn add_file(
         &mut self,
+        target_path: &Utf8Path,
         path: &Utf8Path,
         replace: bool,
-        bytes: &[u8],
     ) -> Result<()> {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update_reader(File::open(path)?)?;
         let file = InstalledFile {
-            path: Utf8Path::new("/").join(path),
-            checksum: blake3::hash(bytes).to_hex().to_string(),
+            path: Utf8Path::new("/").join(target_path),
+            checksum: hasher.finalize().to_string(),
             replace,
         };
 
@@ -68,13 +73,16 @@ impl PackageInfo {
     pub fn install(&self) -> Result<()> {
         fs::create_dir_all(self.path.parent().unwrap())
             .with_context(|| format!("unable to create parent directory for {:?}", self.path))?;
-        write_to_file(
-            &self.path,
-            serde_yaml::to_string(self)
-                .with_context(|| format!("unable to serialize installation into {:?}", self.path))?
-                .as_bytes(),
-        )
-        .with_context(|| format!("unable to write installation info in {:?}", self.path))?;
+        File::create(&self.path)
+            .with_context(|| format!("unable to open file {:?}", self.path))?
+            .write(
+                serde_yaml::to_string(self)
+                    .with_context(|| {
+                        format!("unable to serialize installation into {:?}", self.path)
+                    })?
+                    .as_bytes(),
+            )
+            .with_context(|| format!("unable to write installation info in {:?}", self.path))?;
 
         Ok(())
     }

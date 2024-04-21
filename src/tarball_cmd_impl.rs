@@ -6,7 +6,7 @@ use std::{
 use camino::Utf8Path;
 use clap::Args;
 use color_eyre::{
-    eyre::{bail, Context, ContextCompat},
+    eyre::{Context, ContextCompat},
     owo_colors::OwoColorize,
     Result,
 };
@@ -87,18 +87,17 @@ impl TarballCmd {
                 package.targets(&dirs, &rinstall_version, true, &CompletionsToInstall::all())?;
 
             for install_entry in &targets {
-                if install_entry.full_source.is_file() {
-                    // Print each file added
-                    info!("Adding {}", install_entry.source.as_str().bold().magenta());
-                    archive
-                        .append_path_with_name(
-                            &install_entry.full_source,
-                            format!("{directory_name}/{}", install_entry.source),
-                        )
-                        .with_context(|| {
-                            format!("Unable to append path {} to tarball", install_entry.source)
-                        })?;
-                } else if install_entry.full_source.is_dir() {
+                // Print each file/directory added
+                info!("Adding {}", install_entry.source.as_str().bold().magenta());
+                archive
+                    .append_path_with_name(
+                        &install_entry.full_source,
+                        format!("{directory_name}/{}", install_entry.source),
+                    )
+                    .with_context(|| {
+                        format!("Unable to append path {} to tarball", install_entry.source)
+                    })?;
+                if install_entry.full_source.is_dir() {
                     WalkDir::new(&install_entry.full_source)
                         .into_iter()
                         .try_for_each(|entry| -> Result<()> {
@@ -126,11 +125,6 @@ impl TarballCmd {
 
                             Ok(())
                         })?;
-                } else {
-                    bail!(
-                        "{:?} is neither a file nor a directory",
-                        install_entry.source
-                    );
                 }
             }
         }
