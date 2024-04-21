@@ -6,6 +6,7 @@ pkgs:
       - rinstall
     docs:
       - README.md
+      - CHANGELOG.md
     licenses:
       - LICENSE.md
     man:
