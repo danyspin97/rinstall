@@ -240,16 +240,21 @@ impl InstallCmd {
                                     // skip directories
                                     return Ok(());
                                 }
-                                let full_file_path = Utf8Path::from_path(entry.path()).unwrap();
+                                let full_file_path =
+                                    Utf8Path::from_path(entry.path()).with_context(|| {
+                                        format!(
+                                            "path {:?} contains invalid UTF-8",
+                                            entry.path()
+                                        )
+                                    })?;
 
                                 let destination =
                                     install_entry.destination_for_file_in_directory(full_file_path);
                                 let installer = |destination| -> Result<()> {
-                                    std::fs::copy(&install_entry.full_source, &destination)
+                                    std::fs::copy(full_file_path, &destination)
                                         .with_context(|| {
                                             format!(
-                                                "unable to copy file {} to {destination}",
-                                                install_entry.full_source
+                                                "unable to copy file {full_file_path} to {destination}"
                                             )
                                         })
                                         .map(|_| ())
