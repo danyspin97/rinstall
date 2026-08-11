@@ -385,7 +385,7 @@ impl<'a> PackageInstaller<'a> {
 
             installer(destination_destdir.clone())?;
 
-            self.apply_templating(target)?;
+            self.apply_templating(target, &destination_destdir)?;
 
             self.pkg_info
                 .add_file(&destination, &destination_destdir, target.replace)?;
@@ -403,16 +403,17 @@ impl<'a> PackageInstaller<'a> {
     fn apply_templating(
         &self,
         entry: &InstallEntry,
+        installed_path: &Utf8Path,
     ) -> Result<()> {
         if entry.templating {
-            let mut file = File::open(&entry.destination)
-                .with_context(|| format!("unable to open file {:?}", entry.destination))?;
+            let mut file = File::open(installed_path)
+                .with_context(|| format!("unable to open file {:?}", installed_path))?;
             let mut file_contents = Vec::new();
             file.read_to_end(&mut file_contents)
-                .with_context(|| format!("unable to read file {:?}", entry.destination))?;
+                .with_context(|| format!("unable to read file {:?}", installed_path))?;
             let contents = apply_templating(&file_contents, self.dirs)
                 .with_context(|| format!("unable to apply templating to {:?}", entry.source))?;
-            write_to_file(&entry.destination, contents.as_bytes())?;
+            write_to_file(installed_path, contents.as_bytes())?;
         }
 
         Ok(())
