@@ -153,11 +153,11 @@ impl InstallCmd {
                         };
                         if let Some(destination) = destination {
                             let installer = |destination| -> Result<()> {
-                                // unpack_in returns true if the entry was unpacked
-                                // false if the entry contains '..' and thus was not packed
+                                // unpack_in returns true if the entry was unpacked,
+                                // false if the entry path contains '..' and was skipped for security
                                 match tarball_entry.unpack_in(destination)? {
-                                    true => Err(color_eyre::eyre::anyhow!("path contains '..'")),
-                                    false => Ok(()),
+                                    false => Err(color_eyre::eyre::anyhow!("path contains '..'")),
+                                    true => Ok(()),
                                 }
                             };
                             pkg_installer.install_target(
