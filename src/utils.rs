@@ -26,7 +26,7 @@ pub fn write_to_file(
         .truncate(true)
         .open(destination)
         .with_context(|| format!("unable to open file {:?}", destination))?
-        .write(contents)
+        .write_all(contents)
         .with_context(|| format!("unable to write to file {:?}", destination))?;
 
     Ok(())
