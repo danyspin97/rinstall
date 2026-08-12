@@ -1,7 +1,7 @@
 use std::env;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use color_eyre::{eyre::ensure, Result};
+use color_eyre::{eyre::{ensure, Context}, Result};
 
 use crate::DirsConfig;
 
@@ -51,19 +51,19 @@ impl Dirs {
         if system {
             dirs.check_absolute_paths()?;
         } else {
-            dirs.append_home();
+            dirs.append_home()?;
         }
 
         Ok(dirs)
     }
 
-    fn append_home(&mut self) {
-        let home = &env::var("HOME").unwrap();
+    fn append_home(&mut self) -> Result<()> {
+        let home = env::var("HOME").context("HOME environment variable is not set")?;
         macro_rules! append_home_to {
             ( $($var:ident),* ) => {
                 $(
                     if self.$var.is_relative() {
-                        self.$var = Utf8Path::new(home).join(&self.$var);
+                        self.$var = Utf8Path::new(&home).join(&self.$var);
                     }
                 )*
             };
@@ -80,6 +80,8 @@ impl Dirs {
             runstatedir,
             systemd_unitsdir
         );
+
+        Ok(())
     }
 
     /// Check that all paths are absolute
