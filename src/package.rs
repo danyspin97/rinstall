@@ -434,20 +434,22 @@ impl Package {
         }
 
         if system_install {
-            results.extend(
-                self.user_config
-                    .into_iter()
-                    .map(|entry| {
-                        entry.entry.new_entry(
-                            FilesPolicy::Replace,
-                            &dirs.docdir.as_ref().unwrap().join("user-config"),
-                            &self.pkg_type,
-                            MODE_DATA,
-                        )
-                    })
-                    .collect::<Result<Vec<InstallEntry>>>()
-                    .context("error while iterating user-config entries")?,
-            );
+            if let Some(docdir) = &dirs.docdir {
+                results.extend(
+                    self.user_config
+                        .into_iter()
+                        .map(|entry| {
+                            entry.entry.new_entry(
+                                FilesPolicy::Replace,
+                                &docdir.join("user-config"),
+                                &self.pkg_type,
+                                MODE_DATA,
+                            )
+                        })
+                        .collect::<Result<Vec<InstallEntry>>>()
+                        .context("error while iterating user-config entries")?,
+                );
+            }
         } else {
             results.extend(
                 self.user_config
