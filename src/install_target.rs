@@ -12,6 +12,8 @@ pub struct InstallEntry {
     // Do this file replace the contents by default?
     // i.e. in config it's not replaceable
     pub replace: bool,
+    // Unix permission bits to apply after installation (e.g. 0o755 for executables, 0o644 for data)
+    pub mode: u32,
 }
 
 #[derive(Clone, Copy)]

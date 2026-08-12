@@ -1,6 +1,7 @@
 use std::{
-    fs::{self, File},
+    fs::{self, File, Permissions},
     io::{BufReader, Cursor, Read},
+    os::unix::fs::PermissionsExt,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -384,6 +385,17 @@ impl<'a> PackageInstaller<'a> {
             })?;
 
             installer(destination_destdir.clone())?;
+
+            fs::set_permissions(
+                &destination_destdir,
+                Permissions::from_mode(target.mode),
+            )
+            .with_context(|| {
+                format!(
+                    "unable to set permissions on {}",
+                    destination_destdir
+                )
+            })?;
 
             self.apply_templating(target, &destination_destdir)?;
 

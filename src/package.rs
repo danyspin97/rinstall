@@ -97,6 +97,7 @@ impl InnerEntry {
         policy: FilesPolicy,
         install_dir: &Utf8Path,
         pkg_type: &Type,
+        mode: u32,
     ) -> Result<InstallEntry> {
         let replace = matches!(policy, FilesPolicy::Replace);
         ensure!(
@@ -129,6 +130,7 @@ impl InnerEntry {
             destination,
             templating: self.templating,
             replace,
+            mode,
         })
     }
 }
@@ -297,26 +299,32 @@ impl Package {
 
         let package_name = self.name.unwrap();
 
+        // Unix permission modes for installed files
+        const MODE_EXE: u32 = 0o755;
+        const MODE_DATA: u32 = 0o644;
+
         let empty_path = Utf8PathBuf::new();
         let mut results = [
-            (self.exe, Some(&dirs.bindir), "exe"),
-            (self.libs, Some(&dirs.libdir), "libs"),
-            (self.libexec, Some(&dirs.libexecdir), "libexec"),
-            (self.admin_exe, dirs.sbindir.as_ref(), "admin_exe"),
-            (self.includes, dirs.includedir.as_ref(), "includes"),
+            (self.exe, Some(&dirs.bindir), "exe", MODE_EXE),
+            (self.libs, Some(&dirs.libdir), "libs", MODE_EXE),
+            (self.libexec, Some(&dirs.libexecdir), "libexec", MODE_EXE),
+            (self.admin_exe, dirs.sbindir.as_ref(), "admin_exe", MODE_EXE),
+            (self.includes, dirs.includedir.as_ref(), "includes", MODE_DATA),
             (
                 self.desktop_files,
                 Some(&dirs.datarootdir.join("applications/")),
                 "desktop-files",
+                MODE_DATA,
             ),
             (
                 self.systemd_user_units,
                 Some(&dirs.systemd_unitsdir.join("user/")),
                 "systemd-user-units",
+                MODE_DATA,
             ),
         ]
         .into_iter()
-        .flat_map(|(mut files, mut dir, name)| {
+        .flat_map(|(mut files, mut dir, name, mode)| {
             // Skip directories that don't exists, i.e. mandir, includedir
             if dir.is_none() {
                 files.clear();
@@ -328,7 +336,7 @@ impl Package {
             files.into_iter().map(move |entry| {
                 entry
                     .entry
-                    .new_entry(FilesPolicy::Replace, dir, &pkg_type)
+                    .new_entry(FilesPolicy::Replace, dir, &pkg_type, mode)
                     .with_context(|| format!("While iterating {name} entries"))
             })
         })
@@ -383,7 +391,7 @@ impl Package {
                     };
                     entry
                         .entry
-                        .new_entry(policy, dir, pkg_type)
+                        .new_entry(policy, dir, pkg_type, MODE_DATA)
                         .with_context(|| format!("While iterating {name} entries"))
                 })
             }),
@@ -418,7 +426,7 @@ impl Package {
                             "the last character should be a digit from 1 to 8"
                         );
                         let install_dir = mandir.join(format!("man{}/", &man_cat));
-                        entry.new_entry(FilesPolicy::Replace, &install_dir, &self.pkg_type)
+                        entry.new_entry(FilesPolicy::Replace, &install_dir, &self.pkg_type, MODE_DATA)
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
                     .context("error while iterating man pages")?,
@@ -434,6 +442,7 @@ impl Package {
                             FilesPolicy::Replace,
                             &dirs.docdir.as_ref().unwrap().join("user-config"),
                             &self.pkg_type,
+                            MODE_DATA,
                         )
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
@@ -448,6 +457,7 @@ impl Package {
                             FilesPolicy::NoReplace,
                             &dirs.sysconfdir,
                             &self.pkg_type,
+                            MODE_DATA,
                         )
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
@@ -464,6 +474,7 @@ impl Package {
                             FilesPolicy::Replace,
                             &dirs.datarootdir.join("metainfo/"),
                             &self.pkg_type,
+                            MODE_DATA,
                         )
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
@@ -525,6 +536,7 @@ impl Package {
                         FilesPolicy::Replace,
                         &dirs.datarootdir.join(completionsdir),
                         &self.pkg_type,
+                        MODE_DATA,
                     )
                 })
                 .collect::<Result<Vec<InstallEntry>>>()
@@ -564,6 +576,7 @@ impl Package {
                             FilesPolicy::Replace,
                             pam_modulesdir,
                             &self.pkg_type,
+                            MODE_EXE,
                         )
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
@@ -580,6 +593,7 @@ impl Package {
                             FilesPolicy::Replace,
                             &dirs.systemd_unitsdir.join("system/"),
                             &self.pkg_type,
+                            MODE_DATA,
                         )
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
@@ -607,6 +621,7 @@ impl Package {
                         FilesPolicy::Replace,
                         &dirs.datarootdir,
                         &self.pkg_type,
+                        MODE_DATA,
                     )
                 })
                 .collect::<Result<Vec<InstallEntry>>>()
@@ -643,7 +658,7 @@ impl Package {
                             .to_lowercase()
                             .to_string();
                         let install_dir = dirs.datarootdir.join("terminfo").join(initial);
-                        entry.new_entry(FilesPolicy::Replace, &install_dir, &self.pkg_type)
+                        entry.new_entry(FilesPolicy::Replace, &install_dir, &self.pkg_type, MODE_DATA)
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
                     .context("error while iterating terminfo files")?,
@@ -659,6 +674,7 @@ impl Package {
                             FilesPolicy::Replace,
                             &dirs.libdir.join("pkgconfig/"),
                             &self.pkg_type,
+                            MODE_DATA,
                         )
                     })
                     .collect::<Result<Vec<InstallEntry>>>()
