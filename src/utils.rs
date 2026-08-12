@@ -3,6 +3,43 @@ use std::{fs::OpenOptions, io::Write};
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::{eyre::Context, Result};
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn append_destdir_prepends_prefix() {
+        let path = Utf8Path::new("/usr/local/bin/foo");
+        let result = append_destdir(path, Some("/tmp/pkg"));
+        assert_eq!(result.as_str(), "/tmp/pkg/usr/local/bin/foo");
+    }
+
+    #[test]
+    fn append_destdir_none_is_identity() {
+        let path = Utf8Path::new("/usr/local/bin/foo");
+        let result = append_destdir(path, None);
+        assert_eq!(result.as_str(), "/usr/local/bin/foo");
+    }
+
+    #[test]
+    fn write_to_file_writes_all_bytes() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let path = Utf8Path::from_path(tmp.path()).unwrap();
+        let content = b"Hello, world!\nSecond line.\n";
+        write_to_file(path, content).unwrap();
+        assert_eq!(std::fs::read(tmp.path()).unwrap(), content);
+    }
+
+    #[test]
+    fn write_to_file_truncates_on_overwrite() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), b"old long content that should be gone").unwrap();
+        let path = Utf8Path::from_path(tmp.path()).unwrap();
+        write_to_file(path, b"new").unwrap();
+        assert_eq!(std::fs::read(tmp.path()).unwrap(), b"new");
+    }
+}
+
 pub fn append_destdir(
     destination: &Utf8Path,
     destdir: Option<&str>,

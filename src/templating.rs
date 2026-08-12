@@ -60,3 +60,77 @@ pub fn apply_templating(
 
     Ok(contents)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dirs::Dirs;
+    use camino::Utf8PathBuf;
+
+    fn test_dirs() -> Dirs {
+        Dirs {
+            prefix: Some(Utf8PathBuf::from("/usr/local")),
+            exec_prefix: Some(Utf8PathBuf::from("/usr/local")),
+            bindir: Utf8PathBuf::from("/usr/local/bin"),
+            sbindir: None,
+            libdir: Utf8PathBuf::from("/usr/local/lib"),
+            libexecdir: Utf8PathBuf::from("/usr/local/libexec"),
+            datarootdir: Utf8PathBuf::from("/usr/local/share"),
+            datadir: Utf8PathBuf::from("/usr/local/share"),
+            sysconfdir: Utf8PathBuf::from("/usr/local/etc"),
+            localstatedir: Utf8PathBuf::from("/usr/local/var"),
+            runstatedir: Utf8PathBuf::from("/usr/local/var/run"),
+            includedir: Some(Utf8PathBuf::from("/usr/local/include")),
+            docdir: Some(Utf8PathBuf::from("/usr/local/share/doc")),
+            mandir: Some(Utf8PathBuf::from("/usr/local/share/man")),
+            pam_modulesdir: Some(Utf8PathBuf::from("/usr/local/lib/security")),
+            systemd_unitsdir: Utf8PathBuf::from("/usr/local/lib/systemd"),
+        }
+    }
+
+    #[test]
+    fn replaces_single_var() {
+        let dirs = test_dirs();
+        let result = apply_templating(b"bindir=@bindir@", &dirs).unwrap();
+        assert_eq!(result, "bindir=/usr/local/bin");
+    }
+
+    #[test]
+    fn replaces_multiple_vars() {
+        let dirs = test_dirs();
+        let result = apply_templating(b"p=@prefix@ d=@datadir@", &dirs).unwrap();
+        assert_eq!(result, "p=/usr/local d=/usr/local/share");
+    }
+
+    #[test]
+    fn plain_text_unchanged() {
+        let dirs = test_dirs();
+        let result = apply_templating(b"no placeholders here", &dirs).unwrap();
+        assert_eq!(result, "no placeholders here");
+    }
+
+    #[test]
+    fn optional_dir_present_is_substituted() {
+        let dirs = test_dirs();
+        let result = apply_templating(b"man=@mandir@", &dirs).unwrap();
+        assert_eq!(result, "man=/usr/local/share/man");
+    }
+
+    #[test]
+    fn optional_dir_absent_errors_when_placeholder_used() {
+        let mut dirs = test_dirs();
+        dirs.mandir = None;
+        assert!(
+            apply_templating(b"man=@mandir@", &dirs).is_err(),
+            "should error when referencing an absent optional directory"
+        );
+    }
+
+    #[test]
+    fn optional_dir_absent_ok_when_placeholder_not_used() {
+        let mut dirs = test_dirs();
+        dirs.mandir = None;
+        let result = apply_templating(b"no mandir ref", &dirs).unwrap();
+        assert_eq!(result, "no mandir ref");
+    }
+}

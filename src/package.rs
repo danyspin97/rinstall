@@ -744,3 +744,50 @@ impl Package {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::CompletionsToInstall;
+
+    #[test]
+    fn completions_parse_single_shell() {
+        let c = CompletionsToInstall::parse("bash").unwrap();
+        assert!(c.bash);
+        assert!(!c.fish);
+        assert!(!c.zsh);
+        assert!(!c.elvish);
+    }
+
+    #[test]
+    fn completions_parse_multiple_shells() {
+        let c = CompletionsToInstall::parse("bash,zsh,fish").unwrap();
+        assert!(c.bash);
+        assert!(c.zsh);
+        assert!(c.fish);
+        assert!(!c.elvish);
+    }
+
+    #[test]
+    fn completions_parse_all_shells() {
+        let c = CompletionsToInstall::parse("bash,elvish,fish,zsh").unwrap();
+        assert!(c.bash && c.elvish && c.fish && c.zsh);
+    }
+
+    #[test]
+    fn completions_parse_unknown_shell_errors() {
+        assert!(CompletionsToInstall::parse("powershell").is_err());
+        assert!(CompletionsToInstall::parse("bash,tcsh").is_err());
+    }
+
+    #[test]
+    fn completions_parse_duplicate_errors() {
+        assert!(CompletionsToInstall::parse("bash,bash").is_err());
+        assert!(CompletionsToInstall::parse("fish,zsh,fish").is_err());
+    }
+
+    #[test]
+    fn completions_all_sets_every_shell() {
+        let c = CompletionsToInstall::all();
+        assert!(c.bash && c.elvish && c.fish && c.zsh);
+    }
+}

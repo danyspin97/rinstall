@@ -1,5 +1,54 @@
 use camino::{Utf8Path, Utf8PathBuf};
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(source: &str, destination: &str) -> InstallEntry {
+        InstallEntry {
+            source: Utf8PathBuf::from(source),
+            full_source: Utf8PathBuf::from(source),
+            destination: Utf8PathBuf::from(destination),
+            templating: false,
+            replace: true,
+            mode: 0o644,
+        }
+    }
+
+    #[test]
+    fn destination_for_file_exact_path() {
+        let e = entry("foo.txt", "/usr/share/data/foo.txt");
+        assert_eq!(e.destination_for_file().as_str(), "/usr/share/data/foo.txt");
+    }
+
+    #[test]
+    fn destination_for_file_trailing_slash_appends_filename() {
+        // destination ends with '/' → append the source filename
+        let e = entry("path/to/foo.txt", "/usr/share/data/");
+        assert_eq!(e.destination_for_file().as_str(), "/usr/share/data/foo.txt");
+    }
+
+    #[test]
+    fn destination_for_file_in_directory_strips_source_prefix() {
+        let e = entry("mydir", "/usr/share/data");
+        let full = Utf8PathBuf::from("mydir/sub/file.txt");
+        assert_eq!(
+            e.destination_for_file_in_directory(&full).as_str(),
+            "/usr/share/data/sub/file.txt"
+        );
+    }
+
+    #[test]
+    fn destination_for_file_in_directory_top_level_file() {
+        let e = entry("mydir", "/usr/share/data");
+        let full = Utf8PathBuf::from("mydir/top.txt");
+        assert_eq!(
+            e.destination_for_file_in_directory(&full).as_str(),
+            "/usr/share/data/top.txt"
+        );
+    }
+}
+
 // SpecFile entries
 pub struct InstallEntry {
     // The source as written in the spec file
