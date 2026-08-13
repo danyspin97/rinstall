@@ -124,7 +124,9 @@ impl InstallCmd {
                 let install_entries =
                     package.targets(&dirs, &version, self.system_dirs(), &completions)?;
 
-                while let Some(Ok(mut tarball_entry)) = tarball_entries.next() {
+                for tarball_entry_result in &mut tarball_entries {
+                    let mut tarball_entry =
+                        tarball_entry_result.context("failed to read tarball entry")?;
                     let entry_path = tarball_entry
                         .path()
                         .context("unable to read path for tarball entry")?;
@@ -167,7 +169,7 @@ impl InstallCmd {
                                 self.accept_changes,
                                 installer,
                             )?;
-                            continue;
+                            break;
                         }
                     }
                 }
