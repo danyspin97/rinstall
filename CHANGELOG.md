@@ -1,3 +1,11 @@
+# Unreleased
+
+* Add `rinstall generate` subcommand: auto-detect the common file layout conventions of a
+  project without a build system (README/LICENSE, man pages, desktop files, systemd units,
+  shell completions, top-level executables, ...) and write out a best-effort `install.yml`.
+* Add `--auto` flag to `rinstall install`: fall back to the same auto-detection when no
+  `install.yml` is present, instead of failing.
+
 # 0.3.0
 
 * **Breaking changes**:

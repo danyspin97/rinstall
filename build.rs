@@ -11,6 +11,7 @@ include!("src/dirs_config.rs");
 include!("src/install_cmd.rs");
 include!("src/uninstall.rs");
 include!("src/tarball_cmd.rs");
+include!("src/generate_cmd.rs");
 include!("src/opts.rs");
 
 fn build_shell_completion(outdir: &Path) -> Result<(), Error> {
