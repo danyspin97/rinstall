@@ -83,6 +83,28 @@ the command as root to apply the changes to the filestem.
 # rinstall install --system -y
 ```
 
+### Packages without an `install.yml`
+
+Many small projects (a single script, a couple of config files, no build system at all) don't
+warrant hand-writing an `install.yml`. **rinstall** can detect the common file layout conventions
+(`README`/`LICENSE`, `man/*.1`, `*.desktop`, `systemd/{system,user}/*.service`,
+`completions/{bash,zsh,fish,elvish}/*`, top-level executables, ...) and use that instead. Only
+well-known conventions are recognized; anything ambiguous is left out rather than guessed.
+
+To install straight away, without writing a file to disk:
+
+```bash
+$ rinstall install --auto
+```
+
+To review (and adjust) the detected layout first, generate an `install.yml`:
+
+```bash
+$ rinstall generate
+>>> Generated install.yml
+Review the file and adjust it before installing, then run: rinstall install
+```
+
 ### Uninstall
 
 When a package gets installed, a file with the suffix `.pkg` will be
