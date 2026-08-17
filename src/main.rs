@@ -1,5 +1,7 @@
+mod autodetect;
 mod dirs;
 mod dirs_config_impl;
+mod generate_cmd_impl;
 mod icon;
 mod install_cmd_impl;
 mod install_spec;
@@ -24,6 +26,7 @@ use log::LevelFilter;
 
 use dirs::Dirs;
 pub use dirs_config_impl::DirsConfig;
+pub use generate_cmd_impl::GenerateCmd;
 pub use install_cmd_impl::InstallCmd;
 pub use opts_impl::{Opts, SubCommand};
 use package::Package;
@@ -43,6 +46,7 @@ fn main() -> Result<()> {
         }
         SubCommand::Install(install) => install.run()?,
         SubCommand::Tarball(tarball) => tarball.run()?,
+        SubCommand::Generate(generate) => generate.run()?,
     }
 
     Ok(())

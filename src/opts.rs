@@ -32,4 +32,6 @@ pub enum SubCommand {
     Uninstall(Uninstall),
     #[clap(about = "Create a tarball of the package")]
     Tarball(Box<TarballCmd>),
+    #[clap(about = "Auto-detect installable files and write an install.yml")]
+    Generate(Box<GenerateCmd>),
 }
