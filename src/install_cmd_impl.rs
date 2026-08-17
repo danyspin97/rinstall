@@ -16,6 +16,7 @@ use log::{info, warn};
 use walkdir::WalkDir;
 
 use crate::{
+    autodetect::generate_install_yml,
     dirs::Dirs,
     dirs_config_impl::DirsConfig,
     install_spec::InstallSpec,
@@ -178,7 +179,23 @@ impl InstallCmd {
             let packagedir = Utf8Path::from_path(&self.package_dir).with_context(|| {
                 format!("{:?} contains invalid UTF-8 characters", self.package_dir)
             })?;
-            let install_spec = InstallSpec::new_from_path(packagedir)?;
+            let install_spec = if InstallSpec::exists_at(packagedir) {
+                InstallSpec::new_from_path(packagedir)?
+            } else if self.auto {
+                let pkg_name = packagedir
+                    .file_name()
+                    .map_or_else(|| "package".to_owned(), str::to_owned);
+                warn!(
+                    "no install.yml found in {}, auto-detecting files to install",
+                    packagedir
+                );
+                InstallSpec::new_from_string(generate_install_yml(packagedir, &pkg_name)?)?
+            } else {
+                bail!(
+                    "unable to find 'install.yml' file; use --auto to auto-detect installable \
+                     files, or run `rinstall generate` to write one"
+                );
+            };
             let version = install_spec.version.clone();
 
             let packages = install_spec.packages(&self.packages);

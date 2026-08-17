@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs};
 
 use camino::Utf8Path;
 use color_eyre::{
-    eyre::{bail, Context},
+    eyre::{Context, ContextCompat},
     Result,
 };
 use semver::Version;
@@ -37,21 +37,28 @@ pub struct InstallSpec {
 }
 
 impl InstallSpec {
-    pub fn new_from_path(package_dir: &Utf8Path) -> Result<Self> {
-        // Try root/install.yml and root/.package/install.yml files
-        let install_spec = {
-            let install_spec = package_dir.join("install.yml");
+    // Try root/install.yml and root/.package/install.yml files
+    fn spec_path(package_dir: &Utf8Path) -> Option<camino::Utf8PathBuf> {
+        let install_spec = package_dir.join("install.yml");
+        if install_spec.exists() {
+            Some(install_spec)
+        } else {
+            let install_spec = package_dir.join(".package").join("install.yml");
             if install_spec.exists() {
-                install_spec
+                Some(install_spec)
             } else {
-                let install_spec = package_dir.join(".package").join("install.yml");
-                if install_spec.exists() {
-                    install_spec
-                } else {
-                    bail!("unable to find 'install.yml' file");
-                }
+                None
             }
-        };
+        }
+    }
+
+    pub fn exists_at(package_dir: &Utf8Path) -> bool {
+        Self::spec_path(package_dir).is_some()
+    }
+
+    pub fn new_from_path(package_dir: &Utf8Path) -> Result<Self> {
+        let install_spec =
+            Self::spec_path(package_dir).with_context(|| "unable to find 'install.yml' file")?;
         Ok(serde_yaml::from_str(
             &fs::read_to_string(&install_spec)
                 .with_context(|| format!("unable to read file {:?}", install_spec))?,

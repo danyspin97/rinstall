@@ -92,6 +92,12 @@ pub struct InstallCmd {
         hide = true
     )]
     pub tarball: Option<std::path::PathBuf>,
+    #[clap(
+        long = "auto",
+        help = concat!("Auto-detect the files to install when no install.yml is present,",
+                       " instead of failing")
+    )]
+    pub auto: bool,
     #[clap(flatten, next_help_heading = "DIRECTORIES")]
     pub dirs: DirsConfig,
 }
