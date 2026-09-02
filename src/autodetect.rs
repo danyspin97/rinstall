@@ -17,7 +17,7 @@ const DOC_NAMES: &[&str] = &[
     "history",
     "todo",
 ];
-const LICENSE_NAMES: &[&str] = &["license", "licence", "copying", "copying.lesser", "unlicense"];
+const LICENSE_NAMES: &[&str] = &["license", "licence", "copying", "unlicense"];
 
 // Scripts that are almost always part of a project's own build/release tooling rather than
 // something meant to be installed, even when they carry the executable bit.
@@ -142,11 +142,21 @@ fn stem_matches(
     names.contains(&stem(file_name).to_lowercase().as_str())
 }
 
+// Extensions that happen to start with a digit 1-8, like man page sections, but are
+// well-known unrelated file formats rather than man pages.
+const NOT_MAN_EXTENSIONS: &[&str] = &["7z", "7zip", "3gp", "3g2"];
+
 // Man pages use a single-digit-led extension (man1..man8), e.g. `foo.1`, `foo.3pm`.
 fn is_man_page(file_name: &str) -> bool {
-    Utf8Path::new(file_name)
-        .extension()
-        .and_then(|ext| ext.chars().next())
+    let Some(ext) = Utf8Path::new(file_name).extension() else {
+        return false;
+    };
+    let ext = ext.to_lowercase();
+    if NOT_MAN_EXTENSIONS.contains(&ext.as_str()) {
+        return false;
+    }
+    ext.chars()
+        .next()
         .is_some_and(|c| ('1'..='8').contains(&c))
 }
 
@@ -193,7 +203,7 @@ where
     F: Fn(&str) -> bool,
 {
     for (file_name, _full_path, file_type) in dir_entries(dir)? {
-        if !file_type.is_file() || !filter(&file_name) {
+        if !file_type.is_file() || file_name.starts_with('.') || !filter(&file_name) {
             continue;
         }
         dst.push(rel_prefix.join(&file_name).into_string());
@@ -240,14 +250,14 @@ pub fn generate_install_yml(
                             &mut pkg.systemd_user_units,
                         )?;
                     }
-                    if !system_dir.is_dir() && !user_dir.is_dir() {
-                        collect_dir_files(
-                            &full_path,
-                            Utf8Path::new("systemd"),
-                            is_service,
-                            &mut pkg.systemd_units,
-                        )?;
-                    }
+                    // Loose *.service files directly under systemd/ (alongside any
+                    // system/ and/or user/ subdirectories)
+                    collect_dir_files(
+                        &full_path,
+                        Utf8Path::new("systemd"),
+                        is_service,
+                        &mut pkg.systemd_units,
+                    )?;
                 }
                 "completions" => {
                     let shell_dirs = [
@@ -256,11 +266,9 @@ pub fn generate_install_yml(
                         ("fish", &mut pkg.completions.fish),
                         ("zsh", &mut pkg.completions.zsh),
                     ];
-                    let mut any_shell_dir = false;
                     for (shell, dst) in shell_dirs {
                         let shell_dir = full_path.join(shell);
                         if shell_dir.is_dir() {
-                            any_shell_dir = true;
                             collect_dir_files(
                                 &shell_dir,
                                 &Utf8PathBuf::from(format!("completions/{shell}")),
@@ -269,21 +277,26 @@ pub fn generate_install_yml(
                             )?;
                         }
                     }
-                    // Fall back to a flat completions/ dir classified by extension,
+                    // Loose completion files directly under completions/ (alongside any
+                    // per-shell subdirectories), classified by extension,
                     // e.g. completions/foo.bash, completions/foo.fish
-                    if !any_shell_dir {
-                        collect_dir_files(&full_path, Utf8Path::new("completions"), |n| {
-                            n.ends_with(".bash")
-                        }, &mut pkg.completions.bash)?;
-                        collect_dir_files(&full_path, Utf8Path::new("completions"), |n| {
-                            n.ends_with(".zsh")
-                        }, &mut pkg.completions.zsh)?;
-                        collect_dir_files(&full_path, Utf8Path::new("completions"), |n| {
-                            n.ends_with(".fish")
-                        }, &mut pkg.completions.fish)?;
-                        collect_dir_files(&full_path, Utf8Path::new("completions"), |n| {
-                            n.ends_with(".elv") || n.ends_with(".elvish")
-                        }, &mut pkg.completions.elvish)?;
+                    for (file_name, _full_path, file_type) in dir_entries(&full_path)? {
+                        if !file_type.is_file() || file_name.starts_with('.') {
+                            continue;
+                        }
+                        let lower = file_name.to_lowercase();
+                        let dst = if lower.ends_with(".bash") {
+                            &mut pkg.completions.bash
+                        } else if lower.ends_with(".zsh") {
+                            &mut pkg.completions.zsh
+                        } else if lower.ends_with(".fish") {
+                            &mut pkg.completions.fish
+                        } else if lower.ends_with(".elv") || lower.ends_with(".elvish") {
+                            &mut pkg.completions.elvish
+                        } else {
+                            continue;
+                        };
+                        dst.push(Utf8Path::new("completions").join(&file_name).into_string());
                     }
                 }
                 _ => {}
@@ -341,6 +354,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::generate_install_yml;
+    use crate::install_spec::InstallSpec;
 
     fn make_exe(path: &std::path::Path) {
         std::fs::write(path, "#!/bin/sh\necho hi\n").unwrap();
@@ -431,5 +445,73 @@ mod tests {
 
         let package_dir = Utf8PathBuf::from_path_buf(dir.path().to_owned()).unwrap();
         assert!(generate_install_yml(&package_dir, "pkg").is_err());
+    }
+
+    #[test]
+    fn generated_yaml_round_trips_through_install_spec() {
+        let dir = tempdir().unwrap();
+        std::fs::write(dir.path().join("README.md"), "hello").unwrap();
+        std::fs::write(dir.path().join("LICENSE"), "MIT").unwrap();
+        make_exe(&dir.path().join("myprog"));
+        std::fs::create_dir(dir.path().join("man")).unwrap();
+        std::fs::write(dir.path().join("man").join("foo.1"), "man page").unwrap();
+        std::fs::create_dir_all(dir.path().join("completions").join("bash")).unwrap();
+        std::fs::write(
+            dir.path().join("completions").join("bash").join("foo.bash"),
+            "complete",
+        )
+        .unwrap();
+
+        let package_dir = Utf8PathBuf::from_path_buf(dir.path().to_owned()).unwrap();
+        let yaml = generate_install_yml(&package_dir, "myprog").unwrap();
+
+        let install_spec = InstallSpec::new_from_string(yaml)
+            .expect("generated install.yml must parse back as a valid InstallSpec");
+        let packages = install_spec.packages(&[]);
+        assert_eq!(packages.len(), 1);
+    }
+
+    #[test]
+    fn does_not_misdetect_archive_and_video_extensions_as_man_pages() {
+        let dir = tempdir().unwrap();
+        std::fs::write(dir.path().join("release-notes.7z"), "not a man page").unwrap();
+        std::fs::write(dir.path().join("README.md"), "hello").unwrap();
+
+        let package_dir = Utf8PathBuf::from_path_buf(dir.path().to_owned()).unwrap();
+        let yaml = generate_install_yml(&package_dir, "pkg").unwrap();
+
+        assert!(!yaml.contains("man:"));
+    }
+
+    #[test]
+    fn skips_dotfiles_in_scanned_subdirectories() {
+        let dir = tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("etc")).unwrap();
+        std::fs::write(dir.path().join("etc").join(".gitkeep"), "").unwrap();
+        std::fs::write(dir.path().join("etc").join("foo.conf"), "conf").unwrap();
+
+        let package_dir = Utf8PathBuf::from_path_buf(dir.path().to_owned()).unwrap();
+        let yaml = generate_install_yml(&package_dir, "pkg").unwrap();
+
+        assert!(yaml.contains("- etc/foo.conf"));
+        assert!(!yaml.contains(".gitkeep"));
+    }
+
+    #[test]
+    fn detects_loose_service_file_alongside_system_subdir() {
+        let dir = tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("systemd").join("system")).unwrap();
+        std::fs::write(
+            dir.path().join("systemd").join("system").join("foo.service"),
+            "[Unit]",
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("systemd").join("bar.service"), "[Unit]").unwrap();
+
+        let package_dir = Utf8PathBuf::from_path_buf(dir.path().to_owned()).unwrap();
+        let yaml = generate_install_yml(&package_dir, "pkg").unwrap();
+
+        assert!(yaml.contains("- systemd/system/foo.service"));
+        assert!(yaml.contains("- systemd/bar.service"));
     }
 }

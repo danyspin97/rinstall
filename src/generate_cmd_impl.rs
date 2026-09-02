@@ -18,6 +18,11 @@ impl GenerateCmd {
         })?;
         let output = Utf8Path::from_path(&self.output)
             .with_context(|| format!("{:?} contains invalid UTF-8 characters", self.output))?;
+        let output = if output.is_absolute() {
+            output.to_path_buf()
+        } else {
+            package_dir.join(output)
+        };
 
         ensure!(
             self.force || !output.exists(),
@@ -29,11 +34,17 @@ impl GenerateCmd {
             .name
             .clone()
             .or_else(|| package_dir.file_name().map(str::to_owned))
+            .or_else(|| {
+                package_dir
+                    .canonicalize_utf8()
+                    .ok()
+                    .and_then(|canonical| canonical.file_name().map(str::to_owned))
+            })
             .unwrap_or_else(|| "package".to_owned());
 
         let yaml = generate_install_yml(package_dir, &pkg_name)?;
 
-        std::fs::write(output, &yaml)
+        std::fs::write(&output, &yaml)
             .with_context(|| format!("unable to write file {output}"))?;
 
         info!(

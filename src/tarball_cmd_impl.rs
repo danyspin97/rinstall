@@ -19,7 +19,10 @@ use crate::{
     dirs::Dirs,
     install_spec::InstallSpec,
     package::{CompletionsToInstall, Type},
-    project::{RustDirectories, RUST_DIRECTORIES, RUST_DIRECTORIES_ONCE},
+    project::{
+        RustDirectories, DEFAULT_PACKAGE_DIR, DEFAULT_PACKAGE_DIR_ONCE, RUST_DIRECTORIES,
+        RUST_DIRECTORIES_ONCE,
+    },
     DirsConfig,
 };
 
@@ -34,6 +37,12 @@ impl TarballCmd {
 
         let package_dir = Utf8Path::from_path(&self.package_dir)
             .context("Package directory contains invalid UTF-8 character")?;
+        DEFAULT_PACKAGE_DIR_ONCE.call_once(|| {
+            // We use call_once on std::once::Once, this is safe
+            unsafe {
+                DEFAULT_PACKAGE_DIR = Some(package_dir.to_owned());
+            }
+        });
         // For the filename of the tarball append the suffix .tar.gz
         let filename = format!("{}.tar.gz", self.tarball_name);
 

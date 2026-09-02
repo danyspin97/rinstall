@@ -5,6 +5,8 @@ use color_eyre::{eyre::Context, Result};
 
 pub static RUST_DIRECTORIES_ONCE: Once = Once::new();
 pub static mut RUST_DIRECTORIES: Option<RustDirectories> = None;
+pub static DEFAULT_PACKAGE_DIR_ONCE: Once = Once::new();
+pub static mut DEFAULT_PACKAGE_DIR: Option<Utf8PathBuf> = None;
 
 // Contains data about the project that will be installed
 // It doesn't refer to the system and the actual installation directories
@@ -135,6 +137,9 @@ impl ProjectDirectories for DefaultProjectDirectories {
         &'static self,
         source: &Utf8Path,
     ) -> Utf8PathBuf {
-        source.to_path_buf()
+        match unsafe { &DEFAULT_PACKAGE_DIR } {
+            Some(packagedir) => packagedir.join(source),
+            None => source.to_owned(),
+        }
     }
 }

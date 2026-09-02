@@ -23,7 +23,10 @@ use crate::{
     install_target::InstallEntry,
     package::{CompletionsToInstall, Package, Type},
     package_info::PackageInfo,
-    project::{RustDirectories, RUST_DIRECTORIES, RUST_DIRECTORIES_ONCE},
+    project::{
+        RustDirectories, DEFAULT_PACKAGE_DIR, DEFAULT_PACKAGE_DIR_ONCE, RUST_DIRECTORIES,
+        RUST_DIRECTORIES_ONCE,
+    },
     templating::apply_templating,
     utils::{append_destdir, write_to_file},
     Uninstall,
@@ -95,6 +98,11 @@ impl InstallCmd {
             let version = install_spec.version.clone();
 
             let packages = install_spec.packages(&self.packages);
+            ensure!(
+                self.packages.is_empty() || !packages.is_empty(),
+                "no package matching {:?} found in the install spec",
+                self.packages
+            );
             // TODO
             // Initialize project directories (only rust for now)
             if packages.iter().any(|p| p.pkg_type == Type::Rust) {
@@ -179,12 +187,25 @@ impl InstallCmd {
             let packagedir = Utf8Path::from_path(&self.package_dir).with_context(|| {
                 format!("{:?} contains invalid UTF-8 characters", self.package_dir)
             })?;
+            DEFAULT_PACKAGE_DIR_ONCE.call_once(|| {
+                // We use call_once on std::once::Once, this is safe
+                unsafe {
+                    DEFAULT_PACKAGE_DIR = Some(packagedir.to_owned());
+                }
+            });
             let install_spec = if InstallSpec::exists_at(packagedir) {
                 InstallSpec::new_from_path(packagedir)?
             } else if self.auto {
                 let pkg_name = packagedir
                     .file_name()
-                    .map_or_else(|| "package".to_owned(), str::to_owned);
+                    .map(str::to_owned)
+                    .or_else(|| {
+                        packagedir
+                            .canonicalize_utf8()
+                            .ok()
+                            .and_then(|canonical| canonical.file_name().map(str::to_owned))
+                    })
+                    .unwrap_or_else(|| "package".to_owned());
                 warn!(
                     "no install.yml found in {}, auto-detecting files to install",
                     packagedir
@@ -199,6 +220,11 @@ impl InstallCmd {
             let version = install_spec.version.clone();
 
             let packages = install_spec.packages(&self.packages);
+            ensure!(
+                self.packages.is_empty() || !packages.is_empty(),
+                "no package matching {:?} found in the install spec",
+                self.packages
+            );
 
             if packages.iter().any(|p| p.pkg_type == Type::Rust) {
                 RUST_DIRECTORIES_ONCE.call_once(|| {
