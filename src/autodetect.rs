@@ -65,6 +65,8 @@ impl DetectedCompletions {
 
 #[derive(Serialize, Default)]
 struct DetectedPackage {
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pkg_type: Option<&'static str>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     exe: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -177,6 +179,40 @@ fn is_candidate_exe(
     }
 }
 
+// Ask `cargo metadata` for this workspace's own (non-dependency) binary
+// target names. Only ever recognized when Cargo.toml is present at
+// `package_dir` — everything else (missing cargo, a library-only crate, a
+// metadata parse failure) just yields no bins rather than an error, since
+// this is a best-effort heuristic layered on top of the generic scan
+// below, not a hard requirement.
+fn detect_cargo_bins(package_dir: &Utf8Path) -> Vec<String> {
+    if !package_dir.join("Cargo.toml").is_file() {
+        return Vec::new();
+    }
+    let Ok(output) = std::process::Command::new("cargo")
+        .args(["metadata", "--no-deps", "--format-version", "1"])
+        .current_dir(package_dir)
+        .output()
+    else {
+        return Vec::new();
+    };
+    if !output.status.success() {
+        return Vec::new();
+    }
+    let Ok(metadata) = json::parse(&String::from_utf8_lossy(&output.stdout)) else {
+        return Vec::new();
+    };
+    let mut bins: Vec<String> = metadata["packages"]
+        .members()
+        .flat_map(|pkg| pkg["targets"].members())
+        .filter(|target| target["kind"].members().any(|kind| kind == "bin"))
+        .filter_map(|target| target["name"].as_str().map(str::to_owned))
+        .collect();
+    bins.sort();
+    bins.dedup();
+    bins
+}
+
 fn dir_entries(dir: &Utf8Path) -> Result<Vec<(String, Utf8PathBuf, std::fs::FileType)>> {
     let mut res = Vec::new();
     for entry in fs::read_dir(dir)?.filter_map(std::result::Result::ok) {
@@ -220,6 +256,16 @@ pub fn generate_install_yml(
     pkg_name: &str,
 ) -> Result<String> {
     let mut pkg = DetectedPackage::default();
+
+    // Cargo binary targets resolve against the build's target-dir
+    // (RustDirectories::sourcepath falls back to package_dir for anything
+    // not found there, so this is safe to combine with the repo-root-
+    // relative doc/license/man/etc. entries the generic scan below finds).
+    let cargo_bins = detect_cargo_bins(package_dir);
+    if !cargo_bins.is_empty() {
+        pkg.pkg_type = Some("rust");
+        pkg.exe = cargo_bins;
+    }
 
     for (file_name, full_path, file_type) in dir_entries(package_dir)? {
         if file_name.starts_with('.') {
@@ -495,6 +541,33 @@ mod tests {
 
         assert!(yaml.contains("- etc/foo.conf"));
         assert!(!yaml.contains(".gitkeep"));
+    }
+
+    #[test]
+    fn detects_cargo_binary_target_as_rust_type() {
+        let dir = tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]\nname = \"myprog\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+        )
+        .unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(dir.path().join("src").join("main.rs"), "fn main() {}").unwrap();
+        std::fs::write(dir.path().join("README.md"), "hello").unwrap();
+
+        let package_dir = Utf8PathBuf::from_path_buf(dir.path().to_owned()).unwrap();
+        let yaml = generate_install_yml(&package_dir, "myprog").unwrap();
+
+        assert!(yaml.contains("type: rust"), "{yaml}");
+        assert!(yaml.contains("exe:"), "{yaml}");
+        assert!(yaml.contains("- myprog"), "{yaml}");
+        // Non-exe entries stay repo-root-relative (RustDirectories::sourcepath
+        // falls back to package_dir when the target-dir copy doesn't exist).
+        assert!(yaml.contains("- README.md"), "{yaml}");
+
+        let install_spec = InstallSpec::new_from_string(yaml)
+            .expect("generated install.yml with type: rust must parse back as a valid InstallSpec");
+        assert_eq!(install_spec.packages(&[]).len(), 1);
     }
 
     #[test]
